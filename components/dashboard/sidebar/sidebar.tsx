@@ -11,8 +11,8 @@ import {
   Calendar,
   FileText,
   CreditCard,
-  FileBadge,
   PieChart,
+  ScrollText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useSidebar } from "./sidebar-context";
@@ -52,7 +52,7 @@ const navigationGroups: NavGroup[] = [
   {
     name: "Documents",
     items: [
-      { name: "Agreements", href: "/dashboard/agreements", icon: FileBadge },
+      { name: "Contracts", href: "/dashboard/contracts", icon: ScrollText },
       { name: "Files", href: "/dashboard/files", icon: FileText },
     ],
   },
