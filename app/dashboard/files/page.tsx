@@ -1,6 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { FileGrid, FileRecord } from "@/components/dashboard/files/file-grid";
 
+export const dynamic = "force-dynamic";
+
 export default async function FilesPage() {
   const supabase = createAdminClient();
 

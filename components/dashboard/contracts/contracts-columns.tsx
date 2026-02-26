@@ -18,7 +18,7 @@ export type Contract = {
   field_values: Record<string, unknown>;
   pdf_url: string | null;
   share_token: string;
-  status: "Draft" | "Sent" | "Signed" | "Archived";
+  status: "Draft" | "Sent" | "Signed";
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -33,8 +33,6 @@ function statusColor(s: string) {
       return "border-[#3b82f6] text-[#3b82f6] bg-[#3b82f6]/10";
     case "Draft":
       return "border-[#f59e0b] text-[#f59e0b] bg-[#f59e0b]/10";
-    case "Archived":
-      return "border-[#737373] text-[#737373] bg-[#737373]/10";
     default:
       return "border-[#737373] text-[#737373] bg-[#171717]";
   }

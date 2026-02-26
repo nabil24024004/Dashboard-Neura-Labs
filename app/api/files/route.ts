@@ -38,20 +38,33 @@ export async function POST(req: Request) {
   const file_url = normalizeText(body?.file_url);
   const file_type = normalizeText(body?.file_type);
   const client_id = normalizeText(body?.client_id);
+  const client_name = normalizeText(body?.client_name);
 
-  if (!file_name || !file_url || !file_type || !client_id)
-    return NextResponse.json({ error: "file_name, file_url, file_type, client_id are required" }, { status: 400 });
+  if (!file_name || !file_url || !file_type)
+    return NextResponse.json({ error: "file_name, file_url, and file_type are required" }, { status: 400 });
 
   const supabase = createAdminClient();
+
+  let resolvedClientId = client_id;
+  if (!resolvedClientId && client_name) {
+    const { data: matchedClient } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("company_name", client_name)
+      .is("deleted_at", null)
+      .limit(1)
+      .maybeSingle();
+    resolvedClientId = matchedClient?.id ?? null;
+  }
 
   const payload: Record<string, unknown> = {
     file_name,
     file_url,
     file_type,
-    client_id,
     file_size: Number(body?.file_size) || 0,
     uploaded_by: userId,
   };
+  if (resolvedClientId) payload.client_id = resolvedClientId;
   const project_id = normalizeText(body?.project_id);
   if (project_id) payload.project_id = project_id;
   const description = normalizeText(body?.description);

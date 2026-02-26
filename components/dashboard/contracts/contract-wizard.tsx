@@ -208,7 +208,7 @@ export function ContractWizard() {
         : null;
 
       // 4. Also store as a file record
-      await fetch("/api/files", {
+      const fileRes = await fetch("/api/files", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -216,9 +216,18 @@ export function ContractWizard() {
           file_url: pdfUrl,
           file_type: "application/pdf",
           file_size: blob.size,
+          client_name: clientName,
           description: `Generated contract: ${CONTRACT_SCHEMAS[selectedType].name}`,
         }),
-      }).catch(() => {}); // Non-blocking
+      });
+
+      if (!fileRes.ok) {
+        const filePayload = await fileRes.json().catch(() => null);
+        console.error(
+          "Failed to add contract PDF to files list:",
+          filePayload?.error ?? "Unknown error"
+        );
+      }
 
       setGeneratedContract({
         title,

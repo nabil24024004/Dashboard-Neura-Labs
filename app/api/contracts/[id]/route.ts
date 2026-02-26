@@ -13,6 +13,20 @@ function toText(v: unknown): string | null {
   return t.length ? t : null;
 }
 
+function getStorageTargetFromPublicUrl(url: string) {
+  try {
+    const path = new URL(url).pathname;
+    const match = path.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+    if (!match) return null;
+    return {
+      bucket: match[1],
+      objectPath: decodeURIComponent(match[2]),
+    };
+  } catch {
+    return null;
+  }
+}
+
 type Params = { params: Promise<{ id: string }> };
 
 // ─── GET — single contract ──────────────────────────────────────────
@@ -49,7 +63,7 @@ export async function PATCH(req: Request, { params }: Params) {
   const updates: Record<string, unknown> = {};
 
   if (body.status !== undefined) {
-    const validStatuses = ["Draft", "Sent", "Signed", "Archived"];
+    const validStatuses = ["Draft", "Sent", "Signed"];
     if (!validStatuses.includes(body.status))
       return NextResponse.json(
         { error: `Invalid status. Must be one of: ${validStatuses.join(", ")}` },
@@ -87,7 +101,7 @@ export async function PATCH(req: Request, { params }: Params) {
   return NextResponse.json({ contract: data });
 }
 
-// ─── DELETE — soft delete (archive) ─────────────────────────────────
+// ─── DELETE — hard delete contract + stored PDF ─────────────────────
 export async function DELETE(_req: Request, { params }: Params) {
   const { userId } = await auth();
   if (!userId)
@@ -96,16 +110,56 @@ export async function DELETE(_req: Request, { params }: Params) {
   const { id } = await params;
   const supabase = createAdminClient();
 
-  // Soft delete: set status to Archived
-  const { data, error } = await supabase
+  const { data: contract, error: fetchError } = await supabase
     .from("contracts")
-    .update({ status: "Archived", updated_at: new Date().toISOString() })
+    .select("id,pdf_url")
     .eq("id", id)
-    .select("id")
     .single();
 
-  if (error || !data)
-    return NextResponse.json({ error: "Failed to archive" }, { status: 500 });
+  if (fetchError || !contract)
+    return NextResponse.json({ error: "Contract not found" }, { status: 404 });
+
+  const pdfUrl = toText(contract.pdf_url);
+  if (pdfUrl) {
+    const storageTarget = getStorageTargetFromPublicUrl(pdfUrl);
+    if (storageTarget) {
+      const { error: storageError } = await supabase.storage
+        .from(storageTarget.bucket)
+        .remove([storageTarget.objectPath]);
+
+      if (storageError) {
+        return NextResponse.json(
+          {
+            error: `Failed to delete PDF from storage: ${storageError.message}`,
+          },
+          { status: 500 }
+        );
+      }
+    }
+
+    const { error: filesDeleteError } = await supabase
+      .from("files")
+      .delete()
+      .eq("file_url", pdfUrl);
+
+    if (filesDeleteError) {
+      console.error(
+        "Failed to delete related files rows:",
+        filesDeleteError.message
+      );
+    }
+  }
+
+  const { error: deleteError } = await supabase
+    .from("contracts")
+    .delete()
+    .eq("id", id);
+
+  if (deleteError)
+    return NextResponse.json(
+      { error: `Failed to delete contract: ${deleteError.message}` },
+      { status: 500 }
+    );
 
   return NextResponse.json({ success: true });
 }

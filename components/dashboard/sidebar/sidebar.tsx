@@ -52,7 +52,7 @@ const navigationGroups: NavGroup[] = [
   {
     name: "Documents",
     items: [
-      { name: "Contracts", href: "/dashboard/contracts", icon: ScrollText },
+      { name: "Contracts & Agreements", href: "/dashboard/contracts", icon: ScrollText },
       { name: "Files", href: "/dashboard/files", icon: FileText },
     ],
   },

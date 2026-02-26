@@ -41,7 +41,7 @@ import {
   ExternalLink,
   Send,
   CheckCircle2,
-  Archive,
+  Trash2,
   Mail,
 } from "lucide-react";
 import { Contract } from "./contracts-columns";
@@ -82,7 +82,7 @@ export function ContractsDataTable({
   // ─── Actions ───────────────────────────────────────────────────
   async function handleStatusChange(
     id: string,
-    status: "Draft" | "Sent" | "Signed" | "Archived"
+    status: "Draft" | "Sent" | "Signed"
   ) {
     startTransition(async () => {
       const res = await fetch(`/api/contracts/${id}`, {
@@ -98,8 +98,12 @@ export function ContractsDataTable({
     });
   }
 
-  async function handleArchive(id: string) {
-    if (!confirm("Archive this contract? It will be hidden from the list."))
+  async function handleDelete(id: string) {
+    if (
+      !confirm(
+        "Delete this contract? This will also remove its PDF from storage and cannot be undone."
+      )
+    )
       return;
     startTransition(async () => {
       const res = await fetch(`/api/contracts/${id}`, {
@@ -223,10 +227,10 @@ export function ContractsDataTable({
               <DropdownMenuSeparator className="bg-[#262626]" />
 
               <DropdownMenuItem
-                onClick={() => handleArchive(contract.id)}
+                onClick={() => handleDelete(contract.id)}
                 className="cursor-pointer text-[#ef4444] focus:text-[#ef4444] hover:bg-[#ef4444]/10 focus:bg-[#ef4444]/10"
               >
-                <Archive className="mr-2 h-4 w-4" /> Archive
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
