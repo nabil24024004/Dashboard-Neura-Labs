@@ -54,7 +54,10 @@ function buildGmailUrl(contract: Contract, shareUrl: string) {
       `You can view and download the document using the link below:\n` +
       `${shareUrl}\n\n` +
       `If you have any questions or require changes, feel free to reply to this email.\n\n` +
-      `Best regards`
+      `Best regards` +
+      `Neura Labs Agency` +
+      `Intelligence in Design` +
+      `🌐: neuralabsagency.vercel.app`
   );
   const to = contract.client_email
     ? encodeURIComponent(contract.client_email)
