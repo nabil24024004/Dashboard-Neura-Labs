@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/activity-log";
 
 const CLIENT_COLUMNS = "id,company_name,contact_person,email,phone,country,status,notes,created_at";
 
@@ -65,6 +66,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Failed to create client: ${error.message}` }, { status: 500 });
   }
 
+  await logActivity({
+    userId,
+    action: "Created",
+    entityType: "client",
+    entityId: data.id,
+    details: { target_name: data.company_name },
+  });
+
   return NextResponse.json({ client: data }, { status: 201 });
 }
 
@@ -101,6 +110,14 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Failed to update client" }, { status: 500 });
   }
 
+  await logActivity({
+    userId,
+    action: "Updated",
+    entityType: "client",
+    entityId: data.id,
+    details: { target_name: data.company_name },
+  });
+
   return NextResponse.json({ client: data });
 }
 
@@ -114,15 +131,25 @@ export async function DELETE(req: Request) {
 
   // Soft delete
   const supabase = createAdminClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("clients")
     .update({ deleted_at: new Date().toISOString() })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id,company_name")
+    .single();
 
   if (error) {
     console.error("Failed to delete client:", error.message);
     return NextResponse.json({ error: "Failed to delete client" }, { status: 500 });
   }
+
+  await logActivity({
+    userId,
+    action: "Archived",
+    entityType: "client",
+    entityId: data.id,
+    details: { target_name: data.company_name },
+  });
 
   return NextResponse.json({ success: true });
 }

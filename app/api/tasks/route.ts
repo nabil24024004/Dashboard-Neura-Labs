@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/activity-log";
 
 const TASK_COLUMNS = "id,title,assigned_to,project_id,priority,deadline,status,description,created_at";
 const ALLOWED_PRIORITIES = new Set(["Urgent", "High", "Medium", "Low"]);
@@ -75,7 +76,11 @@ export async function POST(req: Request) {
   const deadline = normalizeDeadline(body?.dueDate);
   if (deadline) insertPayload.deadline = deadline;
 
-  const { error } = await supabase.from("tasks").insert(insertPayload);
+  const { data, error } = await supabase
+    .from("tasks")
+    .insert(insertPayload)
+    .select("id,title")
+    .single();
 
   if (error) {
     console.error("Failed to create task:", JSON.stringify(error));
@@ -84,6 +89,14 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+
+  await logActivity({
+    userId,
+    action: "Created",
+    entityType: "task",
+    entityId: data.id,
+    details: { target_name: data.title },
+  });
 
   // Return success — the client will refetch the full task list
   return NextResponse.json({ success: true }, { status: 201 });
@@ -144,6 +157,14 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Failed to update task" }, { status: 500 });
   }
 
+  await logActivity({
+    userId,
+    action: "Updated",
+    entityType: "task",
+    entityId: data.id,
+    details: { target_name: data.title, status: data.status },
+  });
+
   return NextResponse.json({ task: data });
 }
 
@@ -179,6 +200,14 @@ export async function DELETE(req: Request) {
     // This shouldn't happen with admin client but log it for debugging
     return NextResponse.json({ error: "Task not found or already deleted" }, { status: 404 });
   }
+
+  await logActivity({
+    userId,
+    action: "Deleted",
+    entityType: "task",
+    entityId: data[0].id,
+    details: { target_name: `Task ${data[0].id.slice(0, 8)}` },
+  });
 
   return NextResponse.json({ success: true });
 }

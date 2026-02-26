@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/activity-log";
 
 const INTEGRATION_COLUMNS = "*";
 
@@ -63,6 +64,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Failed to create integration: ${error.message}` }, { status: 500 });
   }
 
+  await logActivity({
+    userId,
+    action: "Created",
+    entityType: "integration",
+    entityId: data.id,
+    details: { target_name: data.name, status: data.status },
+  });
+
   return NextResponse.json({ integration: data }, { status: 201 });
 }
 
@@ -104,6 +113,14 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Failed to update integration" }, { status: 500 });
   }
 
+  await logActivity({
+    userId,
+    action: "Updated",
+    entityType: "integration",
+    entityId: data.id,
+    details: { target_name: data.name, status: data.status },
+  });
+
   return NextResponse.json({ integration: data });
 }
 
@@ -116,12 +133,25 @@ export async function DELETE(req: Request) {
   if (!id) return NextResponse.json({ error: "Integration id required" }, { status: 400 });
 
   const supabase = createAdminClient();
-  const { error } = await supabase.from("integrations").delete().eq("id", id);
+  const { data, error } = await supabase
+    .from("integrations")
+    .delete()
+    .eq("id", id)
+    .select("id,name")
+    .single();
 
   if (error) {
     console.error("Failed to delete integration:", error.message);
     return NextResponse.json({ error: "Failed to delete integration" }, { status: 500 });
   }
+
+  await logActivity({
+    userId,
+    action: "Deleted",
+    entityType: "integration",
+    entityId: data.id,
+    details: { target_name: data.name },
+  });
 
   return NextResponse.json({ success: true });
 }

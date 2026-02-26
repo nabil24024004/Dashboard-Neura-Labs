@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/activity-log";
 
 const INVOICE_COLUMNS =
   "id,client_id,project_id,invoice_number,amount,currency,issue_date,due_date,status,notes,tax_percent,created_at,clients(company_name)";
@@ -24,7 +25,9 @@ function normalizeNumber(value: unknown): number | null {
 
 function normalizeStatus(value: unknown): "Draft" | "Pending" | "Paid" | "Overdue" | "Partial" {
   const valid = ["Draft", "Pending", "Paid", "Overdue", "Partial"];
-  if (typeof value === "string" && valid.includes(value)) return value as any;
+  if (typeof value === "string" && valid.includes(value)) {
+    return value as "Draft" | "Pending" | "Paid" | "Overdue" | "Partial";
+  }
   return "Draft";
 }
 
@@ -105,6 +108,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Failed to create invoice: ${error.message}` }, { status: 500 });
   }
 
+  await logActivity({
+    userId,
+    action: "Created",
+    entityType: "invoice",
+    entityId: data.id,
+    details: { target_name: data.invoice_number, amount: data.amount },
+  });
+
   return NextResponse.json({ invoice: data }, { status: 201 });
 }
 
@@ -138,6 +149,14 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Failed to update invoice" }, { status: 500 });
   }
 
+  await logActivity({
+    userId,
+    action: "Updated",
+    entityType: "invoice",
+    entityId: data.id,
+    details: { target_name: data.invoice_number, status: data.status },
+  });
+
   return NextResponse.json({ invoice: data });
 }
 
@@ -150,12 +169,25 @@ export async function DELETE(req: Request) {
   if (!id) return NextResponse.json({ error: "Invoice id required" }, { status: 400 });
 
   const supabase = createAdminClient();
-  const { error } = await supabase.from("invoices").delete().eq("id", id);
+  const { data, error } = await supabase
+    .from("invoices")
+    .delete()
+    .eq("id", id)
+    .select("id,invoice_number")
+    .single();
 
   if (error) {
     console.error("Failed to delete invoice:", error.message);
     return NextResponse.json({ error: "Failed to delete invoice" }, { status: 500 });
   }
+
+  await logActivity({
+    userId,
+    action: "Deleted",
+    entityType: "invoice",
+    entityId: data.id,
+    details: { target_name: data.invoice_number },
+  });
 
   return NextResponse.json({ success: true });
 }

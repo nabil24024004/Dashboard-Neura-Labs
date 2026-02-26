@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { Bell, FileText, FolderKanban, Users, CreditCard, Calendar, FileBadge, CheckCheck } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Bell, FileText, FolderKanban, Users, CreditCard, Calendar, FileBadge, CheckCheck, ClipboardList, Plug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,8 +15,7 @@ interface ActivityNotification {
   id: string;
   action: string;
   entity_type: string;
-  entity_id: string;
-  details: { target_name?: string } | null;
+  entity_id: string | null;
   created_at: string;
 }
 
@@ -29,6 +28,8 @@ const entityRoutes: Record<string, string> = {
   agreement: "/dashboard/agreements",
   file: "/dashboard/files",
   task: "/dashboard",
+  contract: "/dashboard/contracts",
+  integration: "/dashboard/integrations",
 };
 
 const entityIcons: Record<string, typeof Bell> = {
@@ -39,6 +40,9 @@ const entityIcons: Record<string, typeof Bell> = {
   payment: CreditCard,
   agreement: FileBadge,
   file: FileText,
+  task: ClipboardList,
+  contract: FileBadge,
+  integration: Plug,
 };
 
 function formatTimeAgo(dateStr: string): string {
@@ -60,8 +64,7 @@ export function NotificationsPanel() {
   const [notifications, setNotifications] = useState<ActivityNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const lastSeenRef = useRef<string | null>(null);
+  const [lastSeen, setLastSeen] = useState<string | null>(null);
 
   const getLastSeen = useCallback((): string | null => {
     if (typeof window === "undefined") return null;
@@ -71,7 +74,7 @@ export function NotificationsPanel() {
   const markAllRead = useCallback(() => {
     const now = new Date().toISOString();
     localStorage.setItem(LAST_SEEN_KEY, now);
-    lastSeenRef.current = now;
+    setLastSeen(now);
     setUnreadCount(0);
   }, []);
 
@@ -84,10 +87,10 @@ export function NotificationsPanel() {
       const activities = (data.notifications ?? []) as ActivityNotification[];
       setNotifications(activities);
 
-      const lastSeen = getLastSeen();
-      lastSeenRef.current = lastSeen;
-      if (lastSeen) {
-        const unread = activities.filter((n) => new Date(n.created_at) > new Date(lastSeen)).length;
+      const currentLastSeen = getLastSeen();
+      setLastSeen(currentLastSeen);
+      if (currentLastSeen) {
+        const unread = activities.filter((n) => new Date(n.created_at) > new Date(currentLastSeen)).length;
         setUnreadCount(unread);
       } else {
         // First time - show all as unread
@@ -99,14 +102,19 @@ export function NotificationsPanel() {
   }, [getLastSeen]);
 
   useEffect(() => {
-    void fetchNotifications();
+    const timeout = window.setTimeout(() => {
+      void fetchNotifications();
+    }, 0);
 
     // Poll every 60 seconds
-    const interval = setInterval(() => {
+    const interval = window.setInterval(() => {
       void fetchNotifications();
     }, 60000);
 
-    return () => clearInterval(interval);
+    return () => {
+      window.clearTimeout(timeout);
+      window.clearInterval(interval);
+    };
   }, [fetchNotifications]);
 
   const handleOpen = (open: boolean) => {
@@ -123,8 +131,8 @@ export function NotificationsPanel() {
   };
 
   const isUnread = (notification: ActivityNotification): boolean => {
-    if (!lastSeenRef.current) return true;
-    return new Date(notification.created_at) > new Date(lastSeenRef.current);
+    if (!lastSeen) return true;
+    return new Date(notification.created_at) > new Date(lastSeen);
   };
 
   return (
@@ -182,11 +190,6 @@ export function NotificationsPanel() {
                       <p className={`text-xs font-medium truncate ${unread ? "text-[#F5F5F5]" : "text-[#A3A3A3]"}`}>
                         {notification.action}
                       </p>
-                      {notification.details?.target_name && (
-                        <p className="text-xs text-[#737373] truncate mt-0.5">
-                          {notification.details.target_name}
-                        </p>
-                      )}
                       <p className="text-[10px] text-[#404040] mt-1">
                         {formatTimeAgo(notification.created_at)}
                       </p>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/activity-log";
 
 const MEETING_COLUMNS =
   "id,client_id,project_id,title,scheduled_at,duration_minutes,platform,meeting_url,agenda,status,created_at,clients(company_name),projects(project_name)";
@@ -84,6 +85,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Failed to create meeting: ${error.message}` }, { status: 500 });
   }
 
+  await logActivity({
+    userId,
+    action: "Scheduled",
+    entityType: "meeting",
+    entityId: data.id,
+    details: { target_name: data.title, status: data.status },
+  });
+
   return NextResponse.json({ meeting: data }, { status: 201 });
 }
 
@@ -120,6 +129,14 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Failed to update meeting" }, { status: 500 });
   }
 
+  await logActivity({
+    userId,
+    action: "Updated",
+    entityType: "meeting",
+    entityId: data.id,
+    details: { target_name: data.title, status: data.status },
+  });
+
   return NextResponse.json({ meeting: data });
 }
 
@@ -132,12 +149,25 @@ export async function DELETE(req: Request) {
   if (!id) return NextResponse.json({ error: "Meeting id is required" }, { status: 400 });
 
   const supabase = createAdminClient();
-  const { error } = await supabase.from("meetings").delete().eq("id", id);
+  const { data, error } = await supabase
+    .from("meetings")
+    .delete()
+    .eq("id", id)
+    .select("id,title")
+    .single();
 
   if (error) {
     console.error("Failed to delete meeting:", error.message);
     return NextResponse.json({ error: "Failed to delete meeting" }, { status: 500 });
   }
+
+  await logActivity({
+    userId,
+    action: "Deleted",
+    entityType: "meeting",
+    entityId: data.id,
+    details: { target_name: data.title },
+  });
 
   return NextResponse.json({ success: true });
 }

@@ -9,8 +9,8 @@ export async function GET() {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("activity_logs")
-    .select("id, action, entity_type, entity_id, details, created_at")
-    .order("created_at", { ascending: false })
+    .select("id, action, entity_type, entity_id, timestamp")
+    .order("timestamp", { ascending: false })
     .limit(20);
 
   if (error) {
@@ -18,5 +18,13 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to fetch notifications" }, { status: 500 });
   }
 
-  return NextResponse.json({ notifications: data ?? [] });
+  const notifications = (data ?? []).map((item) => ({
+    id: item.id,
+    action: item.action,
+    entity_type: item.entity_type,
+    entity_id: item.entity_id,
+    created_at: item.timestamp,
+  }));
+
+  return NextResponse.json({ notifications });
 }

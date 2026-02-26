@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/activity-log";
 
 const PROJECT_COLUMNS =
   "id,client_id,project_name,service_type,status,deadline,budget,progress,description,assigned_team,created_at,clients(company_name)";
@@ -90,6 +91,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Failed to create project: ${error.message}` }, { status: 500 });
   }
 
+  await logActivity({
+    userId,
+    action: "Created",
+    entityType: "project",
+    entityId: data.id,
+    details: { target_name: data.project_name },
+  });
+
   return NextResponse.json({ project: data }, { status: 201 });
 }
 
@@ -129,6 +138,14 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Failed to update project" }, { status: 500 });
   }
 
+  await logActivity({
+    userId,
+    action: "Updated",
+    entityType: "project",
+    entityId: data.id,
+    details: { target_name: data.project_name, status: data.status },
+  });
+
   return NextResponse.json({ project: data });
 }
 
@@ -141,12 +158,25 @@ export async function DELETE(req: Request) {
   if (!id) return NextResponse.json({ error: "Project id is required" }, { status: 400 });
 
   const supabase = createAdminClient();
-  const { error } = await supabase.from("projects").delete().eq("id", id);
+  const { data, error } = await supabase
+    .from("projects")
+    .delete()
+    .eq("id", id)
+    .select("id,project_name")
+    .single();
 
   if (error) {
     console.error("Failed to delete project:", error.message);
     return NextResponse.json({ error: "Failed to delete project" }, { status: 500 });
   }
+
+  await logActivity({
+    userId,
+    action: "Deleted",
+    entityType: "project",
+    entityId: data.id,
+    details: { target_name: data.project_name },
+  });
 
   return NextResponse.json({ success: true });
 }

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AnalyticsCharts } from "@/components/dashboard/analytics/analytics-charts";
+import { AutoRefresh } from "@/components/dashboard/overview/auto-refresh";
 
 export const dynamic = "force-dynamic";
 
@@ -490,16 +491,19 @@ export default async function AnalyticsPage() {
     tasks.length > 0;
 
   return (
-    <AnalyticsCharts
-      hasData={hasData}
-      metrics={metrics}
-      revenueTrend={revenueTrend}
-      projectStatus={projectStatus}
-      serviceMix={serviceMix}
-      taskStages={taskStages}
-      invoiceAging={invoiceAging}
-      upcomingDeadlines={upcomingDeadlines}
-      insights={insights}
-    />
+    <>
+      <AutoRefresh intervalMs={30_000} />
+      <AnalyticsCharts
+        hasData={hasData}
+        metrics={metrics}
+        revenueTrend={revenueTrend}
+        projectStatus={projectStatus}
+        serviceMix={serviceMix}
+        taskStages={taskStages}
+        invoiceAging={invoiceAging}
+        upcomingDeadlines={upcomingDeadlines}
+        insights={insights}
+      />
+    </>
   );
 }

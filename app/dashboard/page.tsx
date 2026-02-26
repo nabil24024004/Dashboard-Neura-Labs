@@ -84,10 +84,10 @@ export default async function DashboardOverview() {
       .order("time", { ascending: true })
       .limit(5),
     // Recent activity
-    supabase
+    adminDb
       .from("activity_logs")
-      .select("*")
-      .order("created_at", { ascending: false })
+      .select("id, actor_id, action, entity_type, entity_id, timestamp")
+      .order("timestamp", { ascending: false })
       .limit(5),
     // Tasks due today
     user?.id
@@ -129,7 +129,7 @@ export default async function DashboardOverview() {
 
   return (
     <div className="flex flex-col gap-6 md:gap-8 max-w-7xl mx-auto">
-      <AutoRefresh />
+      <AutoRefresh intervalMs={30_000} />
       <div className="flex flex-wrap items-center justify-between gap-2">
          <h1 className="text-2xl font-semibold tracking-tight">
           {greeting}, {user?.firstName}

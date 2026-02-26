@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/activity-log";
 
 export const dynamic = "force-dynamic";
 
@@ -98,6 +99,14 @@ export async function PATCH(req: Request, { params }: Params) {
       { status: 500 }
     );
 
+  await logActivity({
+    userId,
+    action: "Updated",
+    entityType: "contract",
+    entityId: data.id,
+    details: { target_name: data.title, status: data.status },
+  });
+
   return NextResponse.json({ contract: data });
 }
 
@@ -112,7 +121,7 @@ export async function DELETE(_req: Request, { params }: Params) {
 
   const { data: contract, error: fetchError } = await supabase
     .from("contracts")
-    .select("id,pdf_url")
+    .select("id,title,pdf_url")
     .eq("id", id)
     .single();
 
@@ -160,6 +169,14 @@ export async function DELETE(_req: Request, { params }: Params) {
       { error: `Failed to delete contract: ${deleteError.message}` },
       { status: 500 }
     );
+
+  await logActivity({
+    userId,
+    action: "Deleted",
+    entityType: "contract",
+    entityId: contract.id,
+    details: { target_name: contract.title },
+  });
 
   return NextResponse.json({ success: true });
 }

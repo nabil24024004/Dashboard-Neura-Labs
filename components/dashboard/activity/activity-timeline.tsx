@@ -6,6 +6,8 @@ import {
   Rocket,
   CheckCircle2,
   FileSignature,
+  ClipboardList,
+  Plug,
   Settings,
   MessageSquare,
   type LucideIcon
@@ -13,12 +15,13 @@ import {
 
 export type ActivityLog = {
   id: string;
-  user_id: string;
+  actor_id?: string | null;
   action: string;
   entity_type: string;
   entity_id: string | null;
-  details: Record<string, any>;
-  created_at: string;
+  details?: Record<string, unknown> | null;
+  created_at?: string | null;
+  timestamp?: string | null;
 };
 
 // Map entity types and actions to visual styles
@@ -42,8 +45,20 @@ const getActivityConfig = (entityType: string, action: string): { icon: LucideIc
   if (type === "agreement") {
     return { icon: FileSignature, colorClass: "text-[#ec4899]", bgClass: "bg-[#ec4899]/10 border-[#ec4899]/20" };
   }
+  if (type === "contract") {
+    return { icon: FileSignature, colorClass: "text-[#8b5cf6]", bgClass: "bg-[#8b5cf6]/10 border-[#8b5cf6]/20" };
+  }
   if (type === "meeting") {
     return { icon: MessageSquare, colorClass: "text-[#14b8a6]", bgClass: "bg-[#14b8a6]/10 border-[#14b8a6]/20" };
+  }
+  if (type === "task") {
+    return { icon: ClipboardList, colorClass: "text-[#f59e0b]", bgClass: "bg-[#f59e0b]/10 border-[#f59e0b]/20" };
+  }
+  if (type === "integration") {
+    return { icon: Plug, colorClass: "text-[#6366f1]", bgClass: "bg-[#6366f1]/10 border-[#6366f1]/20" };
+  }
+  if (type === "file") {
+    return { icon: FileText, colorClass: "text-[#0ea5e9]", bgClass: "bg-[#0ea5e9]/10 border-[#0ea5e9]/20" };
   }
 
   return { icon: Settings, colorClass: "text-[#737373]", bgClass: "bg-[#262626] border-[#404040]" };
@@ -60,17 +75,14 @@ export function ActivityTimeline({ activities }: { activities: ActivityLog[] }) 
 
   return (
     <div className="relative border-l border-[#262626] ml-4 pb-4 space-y-8">
-      {activities.map((activity, index) => {
+      {activities.map((activity) => {
         const { icon: Icon, colorClass, bgClass } = getActivityConfig(activity.entity_type, activity.action);
-        const timeAgo = formatDistanceToNow(new Date(activity.created_at), { addSuffix: true });
-
-        // Construct a descriptive message based on action and entity
-        let description = `${activity.action}`;
-        if (activity.details?.target_name) {
-           description += ` ${activity.details.target_name}`;
-        } else if (activity.entity_id) {
-           description += ` for ${activity.entity_type} ID: ${activity.entity_id.split("-")[0]}`;
-        }
+        const occurredAt = activity.created_at ?? activity.timestamp ?? null;
+        const timeAgo = occurredAt
+          ? formatDistanceToNow(new Date(occurredAt), { addSuffix: true })
+          : "just now";
+        const note = typeof activity.details?.note === "string" ? activity.details.note : null;
+        const description = activity.action || `${activity.entity_type} updated`;
 
         return (
           <div key={activity.id} className="relative pl-8 sm:pl-10 group">
@@ -83,8 +95,8 @@ export function ActivityTimeline({ activities }: { activities: ActivityLog[] }) 
                   <p className="text-sm font-medium text-[#F5F5F5]">
                      {description}
                   </p>
-                  {activity.details?.note && (
-                     <p className="text-sm text-[#A3A3A3] mt-1">"{activity.details.note}"</p>
+                  {note && (
+                    <p className="text-sm text-[#A3A3A3] mt-1">&quot;{note}&quot;</p>
                   )}
                </div>
                

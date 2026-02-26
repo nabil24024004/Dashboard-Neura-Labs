@@ -1,14 +1,14 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ActivityTimeline, ActivityLog } from "@/components/dashboard/activity/activity-timeline";
 import { Clock } from "lucide-react";
 
 export default async function ActivityPage() {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: dbActivities, error } = await supabase
     .from("activity_logs")
-    .select("*")
-    .order("created_at", { ascending: false })
+    .select("id, actor_id, action, entity_type, entity_id, timestamp")
+    .order("timestamp", { ascending: false })
     .limit(50);
 
   const activities = (error ? [] : (dbActivities ?? [])) as ActivityLog[];

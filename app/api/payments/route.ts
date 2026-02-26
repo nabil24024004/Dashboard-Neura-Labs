@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/activity-log";
 
 const PAYMENT_COLUMNS =
   "id,invoice_id,amount,payment_date,payment_method,notes,created_at,invoices(invoice_number,amount,clients(company_name))";
@@ -20,6 +21,17 @@ function normalizeDate(value: unknown): string | null {
 function normalizeNumber(value: unknown): number | null {
   const n = Number(value);
   return isFinite(n) && n > 0 ? n : null;
+}
+
+function paymentTargetName(paymentRow: {
+  id: string;
+  invoices?: { invoice_number?: string } | { invoice_number?: string }[] | null;
+}) {
+  const maybeInvoice = Array.isArray(paymentRow.invoices)
+    ? paymentRow.invoices[0]
+    : paymentRow.invoices;
+
+  return maybeInvoice?.invoice_number ?? `Payment ${paymentRow.id.slice(0, 8)}`;
 }
 
 export async function GET() {
@@ -72,6 +84,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Failed to record payment: ${payError.message}` }, { status: 500 });
   }
 
+  await logActivity({
+    userId,
+    action: "Recorded",
+    entityType: "payment",
+    entityId: paymentRow.id,
+    details: {
+      target_name: paymentTargetName(paymentRow),
+      amount: paymentRow.amount,
+    },
+  });
+
   // Auto-update invoice status: sum all payments for this invoice; if >= invoice amount → Paid, else → Partial
   const { data: invoice } = await supabase
     .from("invoices")
@@ -107,12 +130,25 @@ export async function DELETE(req: Request) {
   if (!id) return NextResponse.json({ error: "Payment id required" }, { status: 400 });
 
   const supabase = createAdminClient();
-  const { error } = await supabase.from("payments").delete().eq("id", id);
+  const { data, error } = await supabase
+    .from("payments")
+    .delete()
+    .eq("id", id)
+    .select("id,invoice_id")
+    .single();
 
   if (error) {
     console.error("Failed to delete payment:", error.message);
     return NextResponse.json({ error: "Failed to delete payment" }, { status: 500 });
   }
+
+  await logActivity({
+    userId,
+    action: "Deleted",
+    entityType: "payment",
+    entityId: data.id,
+    details: { target_name: `Payment ${data.id.slice(0, 8)}`, invoice_id: data.invoice_id },
+  });
 
   return NextResponse.json({ success: true });
 }

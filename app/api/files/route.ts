@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/activity-log";
 
 const FILE_COLUMNS =
   "id,client_id,project_id,file_name,file_url,file_type,file_size,uploaded_by,description,version,created_at,clients(company_name),projects(project_name)";
@@ -77,6 +78,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `Failed to save file: ${error.message}` }, { status: 500 });
   }
 
+  await logActivity({
+    userId,
+    action: "Uploaded",
+    entityType: "file",
+    entityId: data.id,
+    details: { target_name: data.file_name, file_type: data.file_type },
+  });
+
   return NextResponse.json({ file: data }, { status: 201 });
 }
 
@@ -103,8 +112,21 @@ export async function DELETE(req: Request) {
     }
   }
 
-  const { error } = await supabase.from("files").delete().eq("id", id);
+  const { data, error } = await supabase
+    .from("files")
+    .delete()
+    .eq("id", id)
+    .select("id,file_name")
+    .single();
   if (error) return NextResponse.json({ error: "Failed to delete file" }, { status: 500 });
+
+  await logActivity({
+    userId,
+    action: "Deleted",
+    entityType: "file",
+    entityId: data.id,
+    details: { target_name: data.file_name },
+  });
 
   return NextResponse.json({ success: true });
 }

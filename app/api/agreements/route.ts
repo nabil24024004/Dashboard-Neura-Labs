@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/activity-log";
 
 const AGR_COLUMNS =
   "id,client_id,type,signed_date,expiry_date,document_link,status,notes,created_at,clients(company_name)";
@@ -62,6 +63,15 @@ export async function POST(req: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: `Failed to create: ${error.message}` }, { status: 500 });
+
+  await logActivity({
+    userId,
+    action: "Created",
+    entityType: "agreement",
+    entityId: data.id,
+    details: { target_name: data.type, status: data.status },
+  });
+
   return NextResponse.json({ agreement: data }, { status: 201 });
 }
 
@@ -92,6 +102,15 @@ export async function PATCH(req: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: "Failed to update" }, { status: 500 });
+
+  await logActivity({
+    userId,
+    action: "Updated",
+    entityType: "agreement",
+    entityId: data.id,
+    details: { target_name: data.type, status: data.status },
+  });
+
   return NextResponse.json({ agreement: data });
 }
 
@@ -104,7 +123,21 @@ export async function DELETE(req: Request) {
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
   const supabase = createAdminClient();
-  const { error } = await supabase.from("agreements").delete().eq("id", id);
+  const { data, error } = await supabase
+    .from("agreements")
+    .delete()
+    .eq("id", id)
+    .select("id,type")
+    .single();
   if (error) return NextResponse.json({ error: "Failed to delete" }, { status: 500 });
+
+  await logActivity({
+    userId,
+    action: "Deleted",
+    entityType: "agreement",
+    entityId: data.id,
+    details: { target_name: data.type },
+  });
+
   return NextResponse.json({ success: true });
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/activity-log";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +91,14 @@ export async function POST(req: Request) {
       { error: `Failed to create: ${error.message}` },
       { status: 500 }
     );
+
+  await logActivity({
+    userId,
+    action: "Created",
+    entityType: "contract",
+    entityId: data.id,
+    details: { target_name: data.title, status: data.status },
+  });
 
   return NextResponse.json({ contract: data }, { status: 201 });
 }

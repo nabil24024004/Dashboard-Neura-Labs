@@ -73,6 +73,11 @@ export function Topbar() {
     }
   };
 
+  const handleTasksChanged = useCallback(() => {
+    void refreshTasksCount();
+    router.refresh();
+  }, [refreshTasksCount, router]);
+
   return (
     <>
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#262626] bg-[#0A0A0A] px-4 md:px-6">
@@ -196,7 +201,7 @@ export function Topbar() {
       </header>
       
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-      <TasksPanel open={tasksOpen} onOpenChange={handleTasksOpenChange} onTasksChanged={refreshTasksCount} />
+      <TasksPanel open={tasksOpen} onOpenChange={handleTasksOpenChange} onTasksChanged={handleTasksChanged} />
     </>
   );
 }
