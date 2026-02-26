@@ -209,7 +209,7 @@ export function ClientsSplitView({ initialData }: ClientsSplitViewProps) {
     <div className="flex h-[calc(100vh-140px)] gap-6">
       {/* Table Side */}
       <div className={`flex-1 overflow-hidden flex flex-col transition-all duration-300 ${selectedClient ? "hidden lg:flex" : "flex"}`}>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <div>
             <h2 className="text-xl font-semibold tracking-tight text-[#F5F5F5]">Clients Directory</h2>
             <p className="text-sm text-[#737373]">Manage your agency's clients and leads.</p>

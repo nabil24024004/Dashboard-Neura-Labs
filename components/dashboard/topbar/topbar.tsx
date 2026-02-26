@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Search, Plus, CheckCircle, Settings, User, Plug } from "lucide-react";
+import { Search, Plus, CheckCircle, Settings, User, Plug, Menu } from "lucide-react";
 import { useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { DashboardBreadcrumb } from "@/components/dashboard/topbar/breadcrumb";
 import { CommandPalette } from "../command/command-palette";
 import { TasksPanel } from "@/components/dashboard/topbar/tasks-panel";
 import { NotificationsPanel } from "@/components/dashboard/topbar/notifications-panel";
+import { useSidebar } from "@/components/dashboard/sidebar/sidebar-context";
 import { useState, useEffect, useCallback } from "react";
 import {
   DropdownMenu,
@@ -22,6 +23,7 @@ import {
 export function Topbar() {
   const { signOut, user } = useClerk();
   const router = useRouter();
+  const { toggleMobile } = useSidebar();
   const [commandOpen, setCommandOpen] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
   const [openTaskCount, setOpenTaskCount] = useState(0);
@@ -73,13 +75,22 @@ export function Topbar() {
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#262626] bg-[#0A0A0A] px-6">
-        <div className="flex items-center gap-4">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#262626] bg-[#0A0A0A] px-4 md:px-6">
+        <div className="flex items-center gap-3">
+          {/* Hamburger — visible below lg */}
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-9 w-9 text-[#737373] hover:text-[#F5F5F5] lg:hidden"
+            onClick={toggleMobile}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
           <DashboardBreadcrumb />
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Search trigger */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* Search trigger — full bar on sm+, icon-only below sm */}
           <Button
             variant="outline"
             className="hidden w-64 justify-between border-[#262626] bg-[#111111] text-[#737373] hover:bg-[#171717] hover:text-[#F5F5F5] sm:flex rounded-full"
@@ -92,6 +103,14 @@ export function Topbar() {
             <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-[#262626] bg-[#0A0A0A] px-1.5 font-mono text-[10px] font-medium text-[#737373]">
               <span className="text-xs">⌘</span>K
             </kbd>
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-9 w-9 text-[#737373] hover:text-[#F5F5F5] sm:hidden"
+            onClick={() => setCommandOpen(true)}
+          >
+            <Search className="h-5 w-5" />
           </Button>
 
           {/* Quick Create */}
@@ -129,15 +148,15 @@ export function Topbar() {
             ) : null}
           </Button>
 
-          {/* Integrations */}
-          <Button size="icon" variant="ghost" className="h-9 w-9 text-[#737373] hover:text-[#F5F5F5]" asChild>
+          {/* Integrations — hidden on small screens */}
+          <Button size="icon" variant="ghost" className="h-9 w-9 text-[#737373] hover:text-[#F5F5F5] hidden md:inline-flex" asChild>
             <Link href="/dashboard/integrations">
               <Plug className="h-5 w-5" />
             </Link>
           </Button>
 
-          {/* Settings */}
-          <Button size="icon" variant="ghost" className="h-9 w-9 text-[#737373] hover:text-[#F5F5F5]" asChild>
+          {/* Settings — hidden on small screens */}
+          <Button size="icon" variant="ghost" className="h-9 w-9 text-[#737373] hover:text-[#F5F5F5] hidden md:inline-flex" asChild>
             <Link href="/dashboard/settings">
               <Settings className="h-5 w-5" />
             </Link>
@@ -149,7 +168,7 @@ export function Topbar() {
           {/* User Profile */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full ml-2 bg-[#171717] border border-[#262626]">
+              <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full ml-1 sm:ml-2 bg-[#171717] border border-[#262626]">
                 <User className="h-5 w-5 text-[#F5F5F5]" />
               </Button>
             </DropdownMenuTrigger>
@@ -162,6 +181,8 @@ export function Topbar() {
               </div>
               <DropdownMenuSeparator className="bg-[#262626]" />
               <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]" onClick={() => router.push("/dashboard/settings")}>My Profile</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717] md:hidden" onClick={() => router.push("/dashboard/integrations")}>Integrations</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717] md:hidden" onClick={() => router.push("/dashboard/settings")}>Settings</DropdownMenuItem>
               <DropdownMenuSeparator className="bg-[#262626]" />
               <DropdownMenuItem 
                 className="cursor-pointer text-[#ef4444] focus:text-[#ef4444] hover:bg-[#ef4444]/10 focus:bg-[#ef4444]/10"

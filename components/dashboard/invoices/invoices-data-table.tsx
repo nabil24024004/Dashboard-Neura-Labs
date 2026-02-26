@@ -299,7 +299,7 @@ export function InvoicesDataTable({ columns, data: initialData }: InvoicesDataTa
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-[#F5F5F5]">Invoices</h2>
           <p className="text-sm text-[#737373]">Manage and track your billing.</p>
@@ -343,7 +343,7 @@ export function InvoicesDataTable({ columns, data: initialData }: InvoicesDataTa
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-[#262626] bg-[#111111] overflow-hidden">
+      <div className="rounded-xl border border-[#262626] bg-[#111111] overflow-x-auto">
         <Table>
           <TableHeader className="bg-[#171717] border-b border-[#262626]">
             {table.getHeaderGroups().map((hg) => (

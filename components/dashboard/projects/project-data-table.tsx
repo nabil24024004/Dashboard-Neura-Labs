@@ -66,7 +66,7 @@ export function ProjectDataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center space-x-2 bg-[#111111] border border-[#262626] rounded-md px-3 py-2 w-full max-w-sm">
           <Search className="h-4 w-4 text-[#737373]" />
           <input
@@ -110,7 +110,7 @@ export function ProjectDataTable<TData, TValue>({
         </div>
       </div>
       
-      <div className="rounded-xl border border-[#262626] bg-[#111111] overflow-hidden">
+      <div className="rounded-xl border border-[#262626] bg-[#111111] overflow-x-auto">
         <Table>
           <TableHeader className="bg-[#171717] border-b border-[#262626]">
             {table.getHeaderGroups().map((headerGroup) => (

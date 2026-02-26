@@ -225,7 +225,7 @@ export function IntegrationsClient({ initialIntegrations, initialLoadError = nul
 
   return (
     <div className="flex flex-col gap-8 h-full max-w-7xl mx-auto w-full">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h2 className="text-xl font-semibold tracking-tight text-[#F5F5F5]">Integrations</h2>
           <p className="text-sm text-[#737373]">Connect external tools and services to your workspace.</p>

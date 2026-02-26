@@ -95,7 +95,7 @@ export function ProjectViewSwitcher({ initialData }: ProjectViewSwitcherProps) {
 
   return (
     <div className="flex flex-col gap-6 h-full">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-[#F5F5F5]">Projects</h2>
           <p className="text-sm text-[#737373]">Manage and track your active projects.</p>

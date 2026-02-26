@@ -128,9 +128,9 @@ export default async function DashboardOverview() {
   ];
 
   return (
-    <div className="flex flex-col gap-8 max-w-7xl mx-auto">
+    <div className="flex flex-col gap-6 md:gap-8 max-w-7xl mx-auto">
       <AutoRefresh />
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
          <h1 className="text-2xl font-semibold tracking-tight">
           {greeting}, {user?.firstName}
          </h1>

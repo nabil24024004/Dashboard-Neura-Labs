@@ -199,7 +199,7 @@ export function PaymentsDataTable({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-[#F5F5F5]">Payments</h2>
           <p className="text-sm text-[#737373]">Track received payments and cash flow across invoices.</p>
@@ -245,7 +245,7 @@ export function PaymentsDataTable({
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-[#262626] bg-[#111111] overflow-hidden">
+      <div className="rounded-xl border border-[#262626] bg-[#111111] overflow-x-auto">
         <Table>
           <TableHeader className="bg-[#171717] border-b border-[#262626]">
             {table.getHeaderGroups().map((hg) => (
