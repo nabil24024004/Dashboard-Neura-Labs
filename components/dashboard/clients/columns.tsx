@@ -36,7 +36,7 @@ export const columns: ColumnDef<Client>[] = [
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="hover:bg-[#171717] hover:text-[#F5F5F5] -ml-4"
+          className="hover:bg-accent hover:text-foreground -ml-4"
         >
           Company Name
           <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -44,7 +44,7 @@ export const columns: ColumnDef<Client>[] = [
       );
     },
     cell: ({ row }) => (
-      <div className="font-medium cursor-pointer hover:text-[#818cf8] transition-colors">
+      <div className="font-medium cursor-pointer hover:text-primary transition-colors">
         {row.getValue("company_name")}
       </div>
     ),
@@ -56,7 +56,7 @@ export const columns: ColumnDef<Client>[] = [
   {
     accessorKey: "email",
     header: "Email",
-    cell: ({ row }) => <div className="text-[#737373]">{row.getValue("email")}</div>,
+    cell: ({ row }) => <div className="text-muted-foreground">{row.getValue("email")}</div>,
   },
   {
     accessorKey: "status",
@@ -71,7 +71,7 @@ export const columns: ColumnDef<Client>[] = [
               ? "border-[#22c55e] text-[#22c55e] bg-[#22c55e]/10"
               : status === "Lead"
               ? "border-[#f59e0b] text-[#f59e0b] bg-[#f59e0b]/10"
-              : "border-[#737373] text-[#737373] bg-[#171717]"
+              : "border-[#737373] text-muted-foreground bg-accent"
           }
         >
           {status}
@@ -91,7 +91,7 @@ export const columns: ColumnDef<Client>[] = [
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="hover:bg-[#171717] hover:text-[#F5F5F5] -ml-4"
+          className="hover:bg-accent hover:text-foreground -ml-4"
         >
           Created
           <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -110,20 +110,20 @@ export const columns: ColumnDef<Client>[] = [
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0 text-[#737373] hover:text-[#F5F5F5] hover:bg-[#171717]">
+            <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-accent">
               <span className="sr-only">Open menu</span>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-[#111111] border-[#262626] text-[#F5F5F5]">
-            <DropdownMenuLabel className="text-[#737373]">Actions</DropdownMenuLabel>
-            <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]" onClick={() => console.log("View", client.id)}>
+          <DropdownMenuContent align="end" className="bg-card border-border text-foreground">
+            <DropdownMenuLabel className="text-muted-foreground">Actions</DropdownMenuLabel>
+            <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent" onClick={() => console.log("View", client.id)}>
               View Details
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]" onClick={() => console.log("Edit", client.id)}>
+            <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent" onClick={() => console.log("Edit", client.id)}>
               Edit Client
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-[#262626]" />
+            <DropdownMenuSeparator className="bg-accent" />
             <DropdownMenuItem className="cursor-pointer text-[#ef4444] focus:text-[#ef4444] hover:bg-[#ef4444]/10 focus:bg-[#ef4444]/10" onClick={() => console.log("Delete", client.id)}>
               Delete Client
             </DropdownMenuItem>

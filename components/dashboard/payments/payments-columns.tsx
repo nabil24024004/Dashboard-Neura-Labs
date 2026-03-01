@@ -32,7 +32,7 @@ export const columns: ColumnDef<Payment>[] = [
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="hover:bg-[#171717] hover:text-[#F5F5F5] -ml-4"
+          className="hover:bg-accent hover:text-foreground -ml-4"
         >
           Invoice applied to
           <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -40,8 +40,8 @@ export const columns: ColumnDef<Payment>[] = [
       );
     },
     cell: ({ row }) => (
-      <div className="font-medium cursor-pointer hover:text-[#818cf8] transition-colors flex items-center gap-2">
-         <FileText className="h-4 w-4 text-[#737373]" />
+      <div className="font-medium cursor-pointer hover:text-primary transition-colors flex items-center gap-2">
+         <FileText className="h-4 w-4 text-muted-foreground" />
          {row.getValue("invoice_number")}
       </div>
     ),
@@ -49,7 +49,7 @@ export const columns: ColumnDef<Payment>[] = [
   {
     accessorKey: "client_name",
     header: "Client",
-    cell: ({ row }) => <div className="text-[#F5F5F5]">{row.getValue("client_name")}</div>,
+    cell: ({ row }) => <div className="text-foreground">{row.getValue("client_name")}</div>,
   },
   {
     accessorKey: "amount",
@@ -70,7 +70,7 @@ export const columns: ColumnDef<Payment>[] = [
     cell: ({ row }) => {
       const method = row.getValue("payment_method") as string;
       return (
-        <Badge variant="outline" className="border-[#262626] text-[#A3A3A3] bg-[#111111] flex items-center gap-1.5 w-max">
+        <Badge variant="outline" className="border-border text-muted-foreground bg-card flex items-center gap-1.5 w-max">
            <CreditCard className="h-3.5 w-3.5" />
            {method}
         </Badge>
@@ -84,7 +84,7 @@ export const columns: ColumnDef<Payment>[] = [
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="hover:bg-[#171717] hover:text-[#F5F5F5] -ml-4"
+          className="hover:bg-accent hover:text-foreground -ml-4"
         >
           Payment Date
           <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -93,7 +93,7 @@ export const columns: ColumnDef<Payment>[] = [
     },
     cell: ({ row }) => {
        const date = new Date(row.getValue("payment_date"));
-       return <div className="text-[#737373]">{format(date, "MMM d, yyyy")}</div>;
+       return <div className="text-muted-foreground">{format(date, "MMM d, yyyy")}</div>;
     },
   },
   {
@@ -104,20 +104,20 @@ export const columns: ColumnDef<Payment>[] = [
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0 text-[#737373] hover:text-[#F5F5F5] hover:bg-[#171717]">
+            <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-accent">
               <span className="sr-only">Open menu</span>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-[#111111] border-[#262626] text-[#F5F5F5]">
-            <DropdownMenuLabel className="text-[#737373]">Actions</DropdownMenuLabel>
-            <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]">
+          <DropdownMenuContent align="end" className="bg-card border-border text-foreground">
+            <DropdownMenuLabel className="text-muted-foreground">Actions</DropdownMenuLabel>
+            <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent">
               View Details
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]">
+            <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent">
               Send Receipt
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-[#262626]" />
+            <DropdownMenuSeparator className="bg-accent" />
             <DropdownMenuItem className="cursor-pointer text-[#ef4444] focus:text-[#ef4444] hover:bg-[#ef4444]/10 focus:bg-[#ef4444]/10" >
               Delete Record
             </DropdownMenuItem>

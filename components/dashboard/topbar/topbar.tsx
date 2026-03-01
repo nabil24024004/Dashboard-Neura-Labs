@@ -10,6 +10,7 @@ import { CommandPalette } from "../command/command-palette";
 import { TasksPanel } from "@/components/dashboard/topbar/tasks-panel";
 import { NotificationsPanel } from "@/components/dashboard/topbar/notifications-panel";
 import { useSidebar } from "@/components/dashboard/sidebar/sidebar-context";
+import { ThemeToggle } from "@/components/dashboard/topbar/theme-toggle";
 import { useState, useEffect, useCallback } from "react";
 import {
   DropdownMenu,
@@ -80,13 +81,13 @@ export function Topbar() {
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#262626] bg-[#0A0A0A] px-4 md:px-6">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background px-4 md:px-6">
         <div className="flex items-center gap-3">
           {/* Hamburger — visible below lg */}
           <Button
             size="icon"
             variant="ghost"
-            className="h-9 w-9 text-[#737373] hover:text-[#F5F5F5] lg:hidden"
+            className="h-9 w-9 text-muted-foreground hover:text-foreground lg:hidden"
             onClick={toggleMobile}
           >
             <Menu className="h-5 w-5" />
@@ -98,21 +99,21 @@ export function Topbar() {
           {/* Search trigger — full bar on sm+, icon-only below sm */}
           <Button
             variant="outline"
-            className="hidden w-64 justify-between border-[#262626] bg-[#111111] text-[#737373] hover:bg-[#171717] hover:text-[#F5F5F5] sm:flex rounded-full"
+            className="hidden w-64 justify-between border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground sm:flex rounded-full"
             onClick={() => setCommandOpen(true)}
           >
             <span className="flex items-center gap-2">
               <Search className="h-4 w-4" />
               <span>Search...</span>
             </span>
-            <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-[#262626] bg-[#0A0A0A] px-1.5 font-mono text-[10px] font-medium text-[#737373]">
+            <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
               <span className="text-xs">⌘</span>K
             </kbd>
           </Button>
           <Button
             size="icon"
             variant="ghost"
-            className="h-9 w-9 text-[#737373] hover:text-[#F5F5F5] sm:hidden"
+            className="h-9 w-9 text-muted-foreground hover:text-foreground sm:hidden"
             onClick={() => setCommandOpen(true)}
           >
             <Search className="h-5 w-5" />
@@ -121,25 +122,25 @@ export function Topbar() {
           {/* Quick Create */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-9 w-9 text-[#737373] hover:text-[#F5F5F5]">
+              <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-foreground">
                 <Plus className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-[#111111] border-[#262626] text-[#F5F5F5]">
-              <DropdownMenuLabel className="text-[#737373]">Create New</DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-[#262626]" />
-              <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]" onClick={() => router.push("/dashboard/clients")}>Client</DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]" onClick={() => router.push("/dashboard/projects")}>Project</DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]" onClick={() => router.push("/dashboard/meetings")}>Meeting</DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]" onClick={() => router.push("/dashboard/invoices")}>Invoice</DropdownMenuItem>
+            <DropdownMenuContent align="end" className="w-48 bg-card border-border text-foreground">
+              <DropdownMenuLabel className="text-muted-foreground">Create New</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent" onClick={() => router.push("/dashboard/clients")}>Client</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent" onClick={() => router.push("/dashboard/projects")}>Project</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent" onClick={() => router.push("/dashboard/meetings")}>Meeting</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent" onClick={() => router.push("/dashboard/invoices")}>Invoice</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           {/* Tasks */}
-          <Button 
-            size="icon" 
-            variant="ghost" 
-            className="h-9 w-9 text-[#737373] hover:text-[#F5F5F5] relative"
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-9 w-9 text-muted-foreground hover:text-foreground relative"
             onClick={() => {
               void refreshTasksCount();
               setTasksOpen(true);
@@ -154,18 +155,21 @@ export function Topbar() {
           </Button>
 
           {/* Integrations — hidden on small screens */}
-          <Button size="icon" variant="ghost" className="h-9 w-9 text-[#737373] hover:text-[#F5F5F5] hidden md:inline-flex" asChild>
+          <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-foreground hidden md:inline-flex" asChild>
             <Link href="/dashboard/integrations">
               <Plug className="h-5 w-5" />
             </Link>
           </Button>
 
           {/* Settings — hidden on small screens */}
-          <Button size="icon" variant="ghost" className="h-9 w-9 text-[#737373] hover:text-[#F5F5F5] hidden md:inline-flex" asChild>
+          <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-foreground hidden md:inline-flex" asChild>
             <Link href="/dashboard/settings">
               <Settings className="h-5 w-5" />
             </Link>
           </Button>
+
+          {/* Theme Toggle */}
+          <ThemeToggle />
 
           {/* Notifications */}
           <NotificationsPanel />
@@ -173,23 +177,23 @@ export function Topbar() {
           {/* User Profile */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full ml-1 sm:ml-2 bg-[#171717] border border-[#262626]">
-                <User className="h-5 w-5 text-[#F5F5F5]" />
+              <Button size="icon" variant="ghost" className="h-9 w-9 rounded-full ml-1 sm:ml-2 bg-accent border border-border">
+                <User className="h-5 w-5 text-foreground" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-[#111111] border-[#262626] text-[#F5F5F5]">
+            <DropdownMenuContent align="end" className="w-56 bg-card border-border text-foreground">
               <div className="flex items-center justify-start gap-2 p-2">
                 <div className="flex flex-col space-y-1 leading-none">
                   {user && <p className="font-medium text-sm">{user.firstName} {user.lastName}</p>}
-                  {user && <p className="w-[200px] truncate text-xs text-[#737373]">{user.primaryEmailAddress?.emailAddress}</p>}
+                  {user && <p className="w-[200px] truncate text-xs text-muted-foreground">{user.primaryEmailAddress?.emailAddress}</p>}
                 </div>
               </div>
-              <DropdownMenuSeparator className="bg-[#262626]" />
-              <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]" onClick={() => router.push("/dashboard/settings")}>My Profile</DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717] md:hidden" onClick={() => router.push("/dashboard/integrations")}>Integrations</DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717] md:hidden" onClick={() => router.push("/dashboard/settings")}>Settings</DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-[#262626]" />
-              <DropdownMenuItem 
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent" onClick={() => router.push("/dashboard/settings")}>My Profile</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent md:hidden" onClick={() => router.push("/dashboard/integrations")}>Integrations</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent md:hidden" onClick={() => router.push("/dashboard/settings")}>Settings</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
                 className="cursor-pointer text-[#ef4444] focus:text-[#ef4444] hover:bg-[#ef4444]/10 focus:bg-[#ef4444]/10"
                 onClick={() => signOut({ redirectUrl: '/login' })}
               >
@@ -199,7 +203,7 @@ export function Topbar() {
           </DropdownMenu>
         </div>
       </header>
-      
+
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
       <TasksPanel open={tasksOpen} onOpenChange={handleTasksOpenChange} onTasksChanged={handleTasksChanged} />
     </>

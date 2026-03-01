@@ -11,7 +11,7 @@ export function DashboardBreadcrumb() {
 
   return (
     <nav aria-label="Breadcrumb">
-      <ol className="flex items-center gap-1.5 text-sm text-[#737373]">
+      <ol className="flex items-center gap-1.5 text-sm text-muted-foreground">
         {paths.map((path, index) => {
           const isLast = index === paths.length - 1;
           const href = `/${paths.slice(0, index + 1).join("/")}`;
@@ -21,9 +21,9 @@ export function DashboardBreadcrumb() {
             <Fragment key={path}>
               <li>
                 {isLast ? (
-                  <span className="font-medium text-[#F5F5F5]">{title}</span>
+                  <span className="font-medium text-foreground">{title}</span>
                 ) : (
-                  <Link href={href} className="hover:text-[#F5F5F5] transition-colors">
+                  <Link href={href} className="hover:text-foreground transition-colors">
                     {title}
                   </Link>
                 )}

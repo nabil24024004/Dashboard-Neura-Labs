@@ -11,13 +11,13 @@ export default function NewContractPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-[#737373] hover:text-[#F5F5F5] h-8"
+            className="text-muted-foreground hover:text-foreground h-8"
           >
             <ArrowLeft className="h-4 w-4 mr-1" /> Contracts
           </Button>
         </Link>
-        <div className="h-4 w-px bg-[#262626]" />
-        <h1 className="text-lg font-semibold text-[#F5F5F5]">
+        <div className="h-4 w-px bg-accent" />
+        <h1 className="text-lg font-semibold text-foreground">
           New Agreement
         </h1>
       </div>

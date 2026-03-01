@@ -67,27 +67,27 @@ export function ProjectDataTable<TData, TValue>({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center space-x-2 bg-[#111111] border border-[#262626] rounded-md px-3 py-2 w-full max-w-sm">
-          <Search className="h-4 w-4 text-[#737373]" />
+        <div className="flex items-center space-x-2 bg-card border border-border rounded-md px-3 py-2 w-full max-w-sm">
+          <Search className="h-4 w-4 text-muted-foreground" />
           <input
             placeholder="Search projects..."
             value={(table.getColumn("project_name")?.getFilterValue() as string) ?? ""}
             onChange={(event) =>
               table.getColumn("project_name")?.setFilterValue(event.target.value)
             }
-            className="w-full bg-transparent border-0 outline-none hover:outline-none focus:outline-none focus:ring-0 text-sm placeholder:text-[#737373] text-[#F5F5F5]"
+            className="w-full bg-transparent border-0 outline-none hover:outline-none focus:outline-none focus:ring-0 text-sm placeholder:text-muted-foreground text-foreground"
           />
         </div>
         <div className="flex items-center space-x-2">
           {/* We can add status filtering here later */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="ml-auto bg-[#111111] border-[#262626] hover:bg-[#171717] hover:text-[#F5F5F5]">
+              <Button variant="outline" className="ml-auto bg-card border-border hover:bg-accent hover:text-foreground">
                 <SlidersHorizontal className="mr-2 h-4 w-4" />
                 Columns
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-[#111111] border-[#262626] text-[#F5F5F5]">
+            <DropdownMenuContent align="end" className="bg-card border-border text-foreground">
               {table
                 .getAllColumns()
                 .filter((column) => column.getCanHide())
@@ -95,7 +95,7 @@ export function ProjectDataTable<TData, TValue>({
                   return (
                     <DropdownMenuCheckboxItem
                       key={column.id}
-                      className="capitalize cursor-pointer hover:bg-[#171717] focus:bg-[#171717]"
+                      className="capitalize cursor-pointer hover:bg-accent focus:bg-accent"
                       checked={column.getIsVisible()}
                       onCheckedChange={(value) =>
                         column.toggleVisibility(!!value)
@@ -110,14 +110,14 @@ export function ProjectDataTable<TData, TValue>({
         </div>
       </div>
       
-      <div className="rounded-xl border border-[#262626] bg-[#111111] overflow-x-auto">
+      <div className="rounded-xl border border-border bg-card overflow-x-auto">
         <Table>
-          <TableHeader className="bg-[#171717] border-b border-[#262626]">
+          <TableHeader className="bg-accent border-b border-border">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="border-b border-[#262626] hover:bg-transparent">
+              <TableRow key={headerGroup.id} className="border-b border-border hover:bg-transparent">
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="text-[#A3A3A3] font-medium h-10">
+                    <TableHead key={header.id} className="text-muted-foreground font-medium h-10">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -136,7 +136,7 @@ export function ProjectDataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="border-b border-[#262626] hover:bg-[#171717]/50 data-[state=selected]:bg-[#171717]"
+                  className="border-b border-border hover:bg-accent/50 data-[state=selected]:bg-accent"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="py-3">
@@ -152,7 +152,7 @@ export function ProjectDataTable<TData, TValue>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center text-[#737373]"
+                  className="h-24 text-center text-muted-foreground"
                 >
                   No projects found.
                 </TableCell>
@@ -163,7 +163,7 @@ export function ProjectDataTable<TData, TValue>({
       </div>
 
       <div className="flex items-center justify-end space-x-2 py-4">
-         <div className="flex-1 text-sm text-[#737373]">
+         <div className="flex-1 text-sm text-muted-foreground">
            Showing {table.getFilteredRowModel().rows.length} projects.
          </div>
         <Button
@@ -171,7 +171,7 @@ export function ProjectDataTable<TData, TValue>({
           size="sm"
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
-          className="bg-[#111111] border-[#262626] hover:bg-[#171717] hover:text-[#F5F5F5] disabled:opacity-50"
+          className="bg-card border-border hover:bg-accent hover:text-foreground disabled:opacity-50"
         >
           Previous
         </Button>
@@ -180,7 +180,7 @@ export function ProjectDataTable<TData, TValue>({
           size="sm"
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
-          className="bg-[#111111] border-[#262626] hover:bg-[#171717] hover:text-[#F5F5F5] disabled:opacity-50"
+          className="bg-card border-border hover:bg-accent hover:text-foreground disabled:opacity-50"
         >
           Next
         </Button>

@@ -19,10 +19,10 @@ export function ContractTypeSelector({ onSelect }: ContractTypeSelectorProps) {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h2 className="text-xl font-semibold text-[#F5F5F5]">
+        <h2 className="text-xl font-semibold text-foreground">
           Select Contract Type
         </h2>
-        <p className="text-sm text-[#737373] mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Choose the type of agreement you want to generate.
         </p>
       </div>
@@ -34,20 +34,20 @@ export function ContractTypeSelector({ onSelect }: ContractTypeSelectorProps) {
             <button
               key={schema.id}
               onClick={() => onSelect(schema.id)}
-              className="group flex flex-col items-start gap-3 p-5 rounded-xl border border-[#262626] bg-[#111111] hover:border-[#818cf8]/50 hover:bg-[#818cf8]/5 transition-all text-left cursor-pointer"
+              className="group flex flex-col items-start gap-3 p-5 rounded-xl border border-border bg-card hover:border-[#818cf8]/50 hover:bg-primary/5 transition-all text-left cursor-pointer"
             >
-              <div className="h-10 w-10 rounded-lg bg-[#818cf8]/10 flex items-center justify-center group-hover:bg-[#818cf8]/20 transition-colors">
-                <Icon className="h-5 w-5 text-[#818cf8]" />
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <Icon className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-[#F5F5F5] group-hover:text-[#818cf8] transition-colors">
+                <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
                   {schema.name}
                 </h3>
-                <p className="text-xs text-[#737373] mt-1 leading-relaxed">
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                   {schema.description}
                 </p>
               </div>
-              <div className="text-[10px] text-[#404040] uppercase tracking-wider">
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
                 {schema.sections.length} sections &bull;{" "}
                 {schema.sections.reduce((acc, sec) => acc + sec.fields.length, 0)}{" "}
                 fields

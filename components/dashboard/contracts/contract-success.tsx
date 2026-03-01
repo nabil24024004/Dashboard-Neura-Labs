@@ -77,26 +77,26 @@ export function ContractSuccess({
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold text-[#F5F5F5]">
+        <h2 className="text-xl font-semibold text-foreground">
           Contract Generated Successfully
         </h2>
-        <p className="text-sm text-[#737373] mt-1 max-w-md">
+        <p className="text-sm text-muted-foreground mt-1 max-w-md">
           Your {contractType} has been created and is ready for distribution.
         </p>
       </div>
 
       {/* Contract info card */}
-      <div className="w-full max-w-md rounded-xl border border-[#262626] bg-[#111111] p-5 text-left space-y-3">
+      <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 text-left space-y-3">
         <div>
-          <p className="text-xs text-[#737373] uppercase tracking-wider">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">
             Document Title
           </p>
-          <p className="text-sm text-[#F5F5F5] font-medium mt-0.5">
+          <p className="text-sm text-foreground font-medium mt-0.5">
             {title}
           </p>
         </div>
         <div>
-          <p className="text-xs text-[#737373] uppercase tracking-wider">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">
             Status
           </p>
           <span className="inline-block mt-0.5 px-2 py-0.5 rounded-md bg-[#22c55e]/10 text-[#22c55e] text-xs font-medium border border-[#22c55e]/20">
@@ -110,7 +110,7 @@ export function ContractSuccess({
         {pdfUrl && (
           <Button
             onClick={() => window.open(pdfUrl, "_blank")}
-            className="bg-[#F5F5F5] hover:bg-[#E5E5E5] text-[#0A0A0A] font-medium flex-1 min-w-[140px]"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium flex-1 min-w-[140px]"
           >
             <Download className="h-4 w-4 mr-2" />
             Download PDF
@@ -121,7 +121,7 @@ export function ContractSuccess({
           <Button
             variant="outline"
             onClick={handleCopyLink}
-            className="bg-[#111111] border-[#262626] hover:bg-[#171717] text-[#F5F5F5] flex-1 min-w-[140px]"
+            className="bg-card border-border hover:bg-accent text-foreground flex-1 min-w-[140px]"
           >
             {copied ? (
               <CheckCircle2 className="h-4 w-4 mr-2 text-[#22c55e]" />
@@ -136,7 +136,7 @@ export function ContractSuccess({
           <Button
             variant="outline"
             onClick={() => window.open(shareUrl, "_blank")}
-            className="bg-[#111111] border-[#262626] hover:bg-[#171717] text-[#F5F5F5] flex-1 min-w-[140px]"
+            className="bg-card border-border hover:bg-accent text-foreground flex-1 min-w-[140px]"
           >
             <ExternalLink className="h-4 w-4 mr-2" />
             Preview Link
@@ -154,25 +154,25 @@ export function ContractSuccess({
             <Mail className="h-4 w-4 mr-2" />
             Send to Client{clientEmail ? ` (${clientEmail})` : ""}
           </Button>
-          <p className="text-xs text-[#737373] mt-1.5 text-center">
+          <p className="text-xs text-muted-foreground mt-1.5 text-center">
             Opens Gmail with a pre-filled email containing the share link
           </p>
         </div>
       )}
 
       {/* Navigation */}
-      <div className="flex items-center gap-4 pt-4 border-t border-[#262626] w-full max-w-md">
+      <div className="flex items-center gap-4 pt-4 border-t border-border w-full max-w-md">
         <Button
           variant="ghost"
           onClick={onBackToList}
-          className="text-[#737373] hover:text-[#F5F5F5] flex-1"
+          className="text-muted-foreground hover:text-foreground flex-1"
         >
           <ArrowLeft className="h-4 w-4 mr-1" /> Back to Contracts
         </Button>
         <Button
           variant="ghost"
           onClick={onNewContract}
-          className="text-[#818cf8] hover:text-[#a5b4fc] hover:bg-[#818cf8]/10 flex-1"
+          className="text-primary hover:text-[#a5b4fc] hover:bg-primary/10 flex-1"
         >
           Create Another
         </Button>

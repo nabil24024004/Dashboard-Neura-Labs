@@ -425,7 +425,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
         {/* Loading indicator */}
         {isSearching && (
-          <div className="flex items-center justify-center gap-2 py-6 text-sm text-[#737373]">
+          <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Searching...
           </div>
@@ -445,7 +445,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   <Icon className="mr-2 h-4 w-4 shrink-0" />
                   <span className="truncate">{result.label}</span>
                   {result.sublabel && (
-                    <span className="ml-2 text-xs text-[#737373] truncate">{result.sublabel}</span>
+                    <span className="ml-2 text-xs text-muted-foreground truncate">{result.sublabel}</span>
                   )}
                 </CommandItem>
               ))}

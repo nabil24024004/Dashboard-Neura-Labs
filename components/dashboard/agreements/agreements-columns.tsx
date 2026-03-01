@@ -34,7 +34,7 @@ export const columns: ColumnDef<Agreement>[] = [
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="hover:bg-[#171717] hover:text-[#F5F5F5] -ml-4"
+          className="hover:bg-accent hover:text-foreground -ml-4"
         >
           Agreement Type
           <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -42,8 +42,8 @@ export const columns: ColumnDef<Agreement>[] = [
       );
     },
     cell: ({ row }) => (
-      <div className="font-medium cursor-pointer hover:text-[#818cf8] transition-colors flex items-center gap-2">
-         <FileSignature className="h-4 w-4 text-[#737373]" />
+      <div className="font-medium cursor-pointer hover:text-primary transition-colors flex items-center gap-2">
+         <FileSignature className="h-4 w-4 text-muted-foreground" />
          {row.getValue("type")}
       </div>
     ),
@@ -51,7 +51,7 @@ export const columns: ColumnDef<Agreement>[] = [
   {
     accessorKey: "client_name",
     header: "Client",
-    cell: ({ row }) => <div className="text-[#F5F5F5]">{row.getValue("client_name")}</div>,
+    cell: ({ row }) => <div className="text-foreground">{row.getValue("client_name")}</div>,
   },
   {
     accessorKey: "status",
@@ -63,7 +63,7 @@ export const columns: ColumnDef<Agreement>[] = [
           case "Active": return "border-[#22c55e] text-[#22c55e] bg-[#22c55e]/10";
           case "Pending Signature": return "border-[#f59e0b] text-[#f59e0b] bg-[#f59e0b]/10";
           case "Expired": return "border-[#ef4444] text-[#ef4444] bg-[#ef4444]/10";
-          default: return "border-[#737373] text-[#737373] bg-[#171717]";
+          default: return "border-[#737373] text-muted-foreground bg-accent";
         }
       };
 
@@ -79,9 +79,9 @@ export const columns: ColumnDef<Agreement>[] = [
     header: "Signed Date",
     cell: ({ row }) => {
        const dateRaw = row.getValue("signed_date");
-       if (!dateRaw) return <div className="text-[#737373]">—</div>;
+       if (!dateRaw) return <div className="text-muted-foreground">—</div>;
        const date = new Date(dateRaw as string);
-       return <div className="text-[#737373]">{format(date, "MMM d, yyyy")}</div>;
+       return <div className="text-muted-foreground">{format(date, "MMM d, yyyy")}</div>;
     },
   },
   {
@@ -89,7 +89,7 @@ export const columns: ColumnDef<Agreement>[] = [
     header: "Expiry Date",
     cell: ({ row }) => {
        const dateRaw = row.getValue("expiry_date");
-       if (!dateRaw) return <div className="text-[#737373]">Indefinite</div>;
+       if (!dateRaw) return <div className="text-muted-foreground">Indefinite</div>;
        
        const date = new Date(dateRaw as string);
        const isExpiringSoon = date < new Date(Date.now() + 86400000 * 30) && date > new Date(); // Expiring in < 30 days
@@ -98,7 +98,7 @@ export const columns: ColumnDef<Agreement>[] = [
        return (
           <div className={`text-sm ${
              isExpired ? "text-[#ef4444] font-medium" : 
-             isExpiringSoon ? "text-[#f59e0b] font-medium" : "text-[#737373]"
+             isExpiringSoon ? "text-[#f59e0b] font-medium" : "text-muted-foreground"
              }`}>
              {format(date, "MMM d, yyyy")}
              {isExpiringSoon && <span className="text-xs ml-2 uppercase">(Soon)</span>}
@@ -114,28 +114,28 @@ export const columns: ColumnDef<Agreement>[] = [
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0 text-[#737373] hover:text-[#F5F5F5] hover:bg-[#171717]">
+            <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-accent">
               <span className="sr-only">Open menu</span>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-[#111111] border-[#262626] text-[#F5F5F5]">
-            <DropdownMenuLabel className="text-[#737373]">Actions</DropdownMenuLabel>
-            <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]">
+          <DropdownMenuContent align="end" className="bg-card border-border text-foreground">
+            <DropdownMenuLabel className="text-muted-foreground">Actions</DropdownMenuLabel>
+            <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent">
               View Details
             </DropdownMenuItem>
             
             {agreement.document_link ? (
-               <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]">
+               <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent">
                   <ExternalLink className="mr-2 h-4 w-4" /> Open Document
                </DropdownMenuItem>
             ) : (
-               <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]" disabled>
-                  <Download className="mr-2 h-4 w-4 text-[#404040]" /> Document Unavailable
+               <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent" disabled>
+                  <Download className="mr-2 h-4 w-4 text-muted-foreground" /> Document Unavailable
                </DropdownMenuItem>
             )}
             
-            <DropdownMenuSeparator className="bg-[#262626]" />
+            <DropdownMenuSeparator className="bg-accent" />
             <DropdownMenuItem className="cursor-pointer text-[#ef4444] focus:text-[#ef4444] hover:bg-[#ef4444]/10 focus:bg-[#ef4444]/10" >
               Delete Record
             </DropdownMenuItem>

@@ -37,9 +37,9 @@ interface Task {
 
 const priorityColorMap: Record<TaskPriority, string> = {
   Urgent: "bg-[#ef4444]",
-  High:   "bg-[#f59e0b]",
+  High: "bg-[#f59e0b]",
   Medium: "bg-[#eab308]",
-  Low:    "bg-[#22c55e]",
+  Low: "bg-[#22c55e]",
 };
 
 function taskMeta(task: Task): string {
@@ -252,29 +252,29 @@ export function TasksPanel({ open, onOpenChange, onTasksChanged }: TasksPanelPro
             const isBusy = savingIds.has(task.id) || deletingIds.has(task.id);
 
             return (
-              <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border border-[#262626] bg-[#111111]">
+              <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card">
                 <Checkbox
                   checked={task.status === "Done"}
                   disabled={isBusy}
                   onCheckedChange={(checked) => void toggleTask(task, checked === true)}
-                  className="mt-0.5 border-[#404040] data-[state=checked]:bg-[#22c55e] data-[state=checked]:text-[#0A0A0A]"
+                  className="mt-0.5 border-muted data-[state=checked]:bg-[#22c55e] data-[state=checked]:text-primary-foreground"
                 />
                 <div className="flex-1 space-y-1 min-w-0">
                   <div className="flex items-center gap-2 relative flex-wrap pr-10">
-                    <p className="text-sm font-medium leading-none text-[#F5F5F5] truncate">{task.title}</p>
+                    <p className="text-sm font-medium leading-none text-foreground truncate">{task.title}</p>
                     <span
                       className={`flex h-2 w-2 rounded-full ${priorityColorMap[task.priority] ?? "bg-[#22c55e]"}`}
                       title={`${task.priority} Priority`}
                     />
                   </div>
-                  <p className="text-xs text-[#737373] truncate">{taskMeta(task)}</p>
+                  <p className="text-xs text-muted-foreground truncate">{taskMeta(task)}</p>
                 </div>
                 <Button
                   size="icon"
                   variant="ghost"
                   disabled={isBusy}
                   onClick={() => void deleteTask(task)}
-                  className="h-8 w-8 text-[#737373] hover:text-[#ef4444] hover:bg-[#171717]"
+                  className="h-8 w-8 text-muted-foreground hover:text-[#ef4444] hover:bg-accent"
                 >
                   {deletingIds.has(task.id) ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -292,18 +292,18 @@ export function TasksPanel({ open, onOpenChange, onTasksChanged }: TasksPanelPro
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent showCloseButton={false} className="w-[400px] sm:w-[540px] bg-[#0A0A0A] border-l border-[#262626] text-[#F5F5F5] p-0 flex flex-col">
-        <SheetHeader className="p-6 border-b border-[#262626] flex flex-row items-center justify-between space-y-0">
-          <SheetTitle className="text-[#F5F5F5]">My Tasks</SheetTitle>
+      <SheetContent showCloseButton={false} className="w-[400px] sm:w-[540px] bg-background border-l border-border text-foreground p-0 flex flex-col">
+        <SheetHeader className="p-6 border-b border-border flex flex-row items-center justify-between space-y-0">
+          <SheetTitle className="text-foreground">My Tasks</SheetTitle>
           <div className="flex items-center gap-2">
             <Button
               size="sm"
               onClick={() => setShowCreateForm((prev) => !prev)}
-              className="bg-[#111111] hover:bg-[#171717] text-[#F5F5F5] border border-[#262626]"
+              className="bg-card hover:bg-accent text-foreground border border-border"
             >
               <Plus className="h-4 w-4 mr-1" /> New Task
             </Button>
-            <SheetClose className="rounded-sm p-1.5 text-[#737373] hover:text-[#F5F5F5] hover:bg-[#171717] transition-colors">
+            <SheetClose className="rounded-sm p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
               <X className="h-4 w-4" />
               <span className="sr-only">Close</span>
             </SheetClose>
@@ -312,24 +312,24 @@ export function TasksPanel({ open, onOpenChange, onTasksChanged }: TasksPanelPro
 
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
           {showCreateForm && (
-            <div className="rounded-lg border border-[#262626] bg-[#111111] p-4 space-y-3">
+            <div className="rounded-lg border border-border bg-card p-4 space-y-3">
               <Input
                 value={newTask.title}
                 onChange={(e) => setNewTask((prev) => ({ ...prev, title: e.target.value }))}
                 placeholder="Task title"
-                className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] placeholder:text-[#737373]"
+                className="bg-background border-border text-foreground placeholder:text-muted-foreground"
               />
               <div className="grid grid-cols-2 gap-3">
                 <Input
                   type="date"
                   value={newTask.dueDate}
                   onChange={(e) => setNewTask((prev) => ({ ...prev, dueDate: e.target.value }))}
-                  className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5]"
+                  className="bg-background border-border text-foreground"
                 />
                 <select
                   value={newTask.priority}
                   onChange={(e) => setNewTask((prev) => ({ ...prev, priority: e.target.value as TaskPriority }))}
-                  className="h-9 rounded-md border border-[#262626] bg-[#0A0A0A] px-3 text-sm text-[#F5F5F5] outline-none focus:border-[#404040]"
+                  className="h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-muted"
                 >
                   <option value="Urgent">Urgent</option>
                   <option value="High">High</option>
@@ -343,7 +343,7 @@ export function TasksPanel({ open, onOpenChange, onTasksChanged }: TasksPanelPro
                   variant="ghost"
                   disabled={creating}
                   onClick={() => setShowCreateForm(false)}
-                  className="text-[#A3A3A3] hover:text-[#F5F5F5] hover:bg-[#171717]"
+                  className="text-muted-foreground hover:text-foreground hover:bg-accent"
                 >
                   Cancel
                 </Button>
@@ -351,7 +351,7 @@ export function TasksPanel({ open, onOpenChange, onTasksChanged }: TasksPanelPro
                   size="sm"
                   disabled={creating}
                   onClick={() => void createTask()}
-                  className="bg-[#F5F5F5] hover:bg-[#E5E5E5] text-[#0A0A0A]"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {creating && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
                   Add Task
@@ -361,23 +361,23 @@ export function TasksPanel({ open, onOpenChange, onTasksChanged }: TasksPanelPro
           )}
 
           {error && (
-            <div className="rounded-md border border-[#ef4444]/30 bg-[#ef4444]/10 px-3 py-2 text-xs text-[#fca5a5]">
+            <div className="rounded-md border border-[#ef4444]/30 bg-[#ef4444]/10 px-3 py-2 text-xs text-red-700 dark:text-[#fca5a5]">
               {error}
             </div>
           )}
 
           {loading ? (
-            <div className="flex items-center justify-center py-10 text-sm text-[#737373]">
+            <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading tasks...
             </div>
           ) : (
             <>
               {renderSection("Overdue", "text-[#ef4444]", overdueTasks)}
-              {renderSection("Today", "text-[#A3A3A3]", todayTasks)}
-              {renderSection("Upcoming", "text-[#A3A3A3]", upcomingTasks)}
+              {renderSection("Today", "text-muted-foreground", todayTasks)}
+              {renderSection("Upcoming", "text-muted-foreground", upcomingTasks)}
 
               {!error && openTasks.length === 0 && (
-                <div className="rounded-lg border border-[#262626] bg-[#111111] p-4 text-sm text-[#737373]">
+                <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
                   No open tasks yet. Create one to get started.
                 </div>
               )}

@@ -134,7 +134,7 @@ export default async function DashboardOverview() {
          <h1 className="text-2xl font-semibold tracking-tight">
           {greeting}, {user?.firstName}
          </h1>
-         <p className="text-sm text-[#737373]">{today}</p>
+         <p className="text-sm text-muted-foreground">{today}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -142,9 +142,9 @@ export default async function DashboardOverview() {
           <Link
             key={card.label}
             href={card.href}
-            className="group p-4 rounded-xl border border-[#262626] bg-[#111111] flex flex-col justify-between h-32 hover:border-[#404040] transition-colors"
+            className="group p-4 rounded-xl border border-border bg-card flex flex-col justify-between h-32 hover:border-muted transition-colors"
           >
-            <div className="flex items-center justify-between text-[#737373]">
+            <div className="flex items-center justify-between text-muted-foreground">
               <div className="flex items-center gap-2">
                 <card.icon className="h-4 w-4" />
                 <span className="text-sm font-medium">{card.label}</span>
@@ -157,24 +157,24 @@ export default async function DashboardOverview() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-         <div className="rounded-xl border border-[#262626] bg-[#111111] overflow-hidden flex flex-col h-[300px]">
-            <div className="p-4 border-b border-[#262626] flex items-center justify-between">
-               <h3 className="font-medium text-[#F5F5F5]">Upcoming Meetings (Today)</h3>
-               <Link href="/dashboard/meetings" className="text-xs text-[#6366f1] hover:text-[#818cf8]">View all</Link>
+         <div className="rounded-xl border border-border bg-card overflow-hidden flex flex-col h-[300px]">
+            <div className="p-4 border-b border-border flex items-center justify-between">
+               <h3 className="font-medium text-foreground">Upcoming Meetings (Today)</h3>
+               <Link href="/dashboard/meetings" className="text-xs text-[#6366f1] hover:text-primary">View all</Link>
             </div>
             <div className="p-4 flex-1 overflow-y-auto space-y-3">
                {meetings.length === 0 ? (
                  <div className="flex flex-col items-center justify-center h-full text-center gap-2">
                    <Clock className="h-8 w-8 text-[#262626]" />
-                   <p className="text-sm text-[#737373]">No meetings scheduled for today.</p>
-                   <Link href="/dashboard/meetings" className="text-xs text-[#6366f1] hover:text-[#818cf8]">Schedule a meeting</Link>
+                   <p className="text-sm text-muted-foreground">No meetings scheduled for today.</p>
+                   <Link href="/dashboard/meetings" className="text-xs text-[#6366f1] hover:text-primary">Schedule a meeting</Link>
                  </div>
                ) : (
                  meetings.map((meeting) => (
-                   <div key={meeting.id} className="flex items-start gap-3 p-3 rounded-lg border border-[#262626] bg-[#0A0A0A] hover:border-[#404040] transition-colors">
+                   <div key={meeting.id} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-background hover:border-muted transition-colors">
                      <div className="flex flex-col flex-1">
-                       <p className="text-sm font-medium text-[#F5F5F5]">{meeting.title}</p>
-                       <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-[#737373]">
+                       <p className="text-sm font-medium text-foreground">{meeting.title}</p>
+                       <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
                          <span className="flex items-center gap-1">
                             <span className="w-2 h-2 rounded-full bg-[#14b8a6]"></span>
                             {meeting.time || "TBD"}
@@ -194,7 +194,7 @@ export default async function DashboardOverview() {
                        </div>
                      </div>
                      {meeting.meeting_link && (
-                       <a href={meeting.meeting_link} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#6366f1] hover:text-[#818cf8] px-3 py-1.5 rounded-md bg-[#6366f1]/10">
+                       <a href={meeting.meeting_link} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#6366f1] hover:text-primary px-3 py-1.5 rounded-md bg-[#6366f1]/10">
                          Join
                        </a>
                      )}
@@ -204,22 +204,22 @@ export default async function DashboardOverview() {
             </div>
          </div>
 
-         <div className="rounded-xl border border-[#262626] bg-[#111111] overflow-hidden flex flex-col h-[300px]">
-            <div className="p-4 border-b border-[#262626] flex items-center justify-between">
-               <h3 className="font-medium text-[#F5F5F5]">Tasks Due Today</h3>
+         <div className="rounded-xl border border-border bg-card overflow-hidden flex flex-col h-[300px]">
+            <div className="p-4 border-b border-border flex items-center justify-between">
+               <h3 className="font-medium text-foreground">Tasks Due Today</h3>
             </div>
             <div className="p-4 flex-1 overflow-y-auto space-y-3">
               {dueTodayTasks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center gap-2">
-                  <p className="text-sm text-[#737373]">No tasks due today.</p>
+                  <p className="text-sm text-muted-foreground">No tasks due today.</p>
                 </div>
               ) : (
                 dueTodayTasks.map((task) => (
-                  <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border border-[#262626] bg-[#0A0A0A] hover:border-[#404040] transition-colors">
-                    <div className="mt-0.5 border-2 border-[#404040] rounded-sm w-4 h-4"></div>
+                  <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-background hover:border-muted transition-colors">
+                    <div className="mt-0.5 border-2 border-muted rounded-sm w-4 h-4"></div>
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2 flex-wrap pr-10">
-                        <p className="text-sm font-medium leading-none text-[#F5F5F5]">{task.title}</p>
+                        <p className="text-sm font-medium leading-none text-foreground">{task.title}</p>
                         <span
                           className={`flex h-2 w-2 rounded-full ${
                             task.priority === "Urgent"
@@ -233,7 +233,7 @@ export default async function DashboardOverview() {
                           title={`${task.priority ?? "Low"} Priority`}
                         ></span>
                       </div>
-                      <p className="text-xs text-[#737373]">
+                      <p className="text-xs text-muted-foreground">
                         {task.deadline ? format(new Date(task.deadline), "MMM d") : "No due date"}
                       </p>
                     </div>
@@ -244,14 +244,14 @@ export default async function DashboardOverview() {
          </div>
       </div>
 
-       <div className="rounded-xl border border-[#262626] bg-[#111111] overflow-hidden">
-          <div className="p-4 border-b border-[#262626] flex items-center justify-between">
-             <h3 className="font-medium text-[#F5F5F5]">Recent Activity Feed</h3>
-             <Link href="/dashboard/activity" className="text-xs text-[#6366f1] hover:text-[#818cf8]">View all activity</Link>
+       <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="p-4 border-b border-border flex items-center justify-between">
+             <h3 className="font-medium text-foreground">Recent Activity Feed</h3>
+             <Link href="/dashboard/activity" className="text-xs text-[#6366f1] hover:text-primary">View all activity</Link>
           </div>
           <div className="p-6">
              {activities.length === 0 ? (
-               <p className="text-sm text-[#737373] text-center py-4">No recent activity.</p>
+               <p className="text-sm text-muted-foreground text-center py-4">No recent activity.</p>
              ) : (
                <ActivityTimeline activities={activities} />
              )}

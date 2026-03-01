@@ -51,19 +51,19 @@ function UploadForm({ clientId, description, onChange, clients, error, uploading
     <div className="space-y-3">
       {error && <p className="text-xs text-[#ef4444] bg-[#ef4444]/10 border border-[#ef4444]/20 rounded px-3 py-2">{error}</p>}
       <div>
-        <label className="text-xs text-[#737373] mb-1 block">Client *</label>
-        <select value={clientId} onChange={(e) => onChange("clientId", e.target.value)} className="w-full h-9 rounded-md border border-[#262626] bg-[#0A0A0A] px-3 text-sm text-[#F5F5F5] outline-none">
+        <label className="text-xs text-muted-foreground mb-1 block">Client *</label>
+        <select value={clientId} onChange={(e) => onChange("clientId", e.target.value)} className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none">
           <option value="">Select client…</option>
           {clients.map((c) => <option key={c.id} value={c.id}>{c.company_name}</option>)}
         </select>
       </div>
       <div>
-        <label className="text-xs text-[#737373] mb-1 block">Description (optional)</label>
-        <Input value={description} onChange={(e) => onChange("description", e.target.value)} placeholder="What is this file?" className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] placeholder:text-[#404040] h-9" />
+        <label className="text-xs text-muted-foreground mb-1 block">Description (optional)</label>
+        <Input value={description} onChange={(e) => onChange("description", e.target.value)} placeholder="What is this file?" className="bg-background border-border text-foreground placeholder:text-muted-foreground h-9" />
       </div>
       <div className="flex justify-end gap-2">
-        <Button size="sm" variant="ghost" disabled={uploading} onClick={onCancel} className="text-[#A3A3A3]">Cancel</Button>
-        <Button size="sm" disabled={uploading} onClick={onUpload} className="bg-[#F5F5F5] hover:bg-[#E5E5E5] text-[#0A0A0A]">
+        <Button size="sm" variant="ghost" disabled={uploading} onClick={onCancel} className="text-muted-foreground">Cancel</Button>
+        <Button size="sm" disabled={uploading} onClick={onUpload} className="bg-primary hover:bg-primary/90 text-primary-foreground">
           {uploading && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />} Upload
         </Button>
       </div>
@@ -144,10 +144,10 @@ export function FileGrid({ files: initialFiles, clients }: FileGridProps) {
   }
 
   const getIcon = (type: string) => {
-    if (type.startsWith("image/")) return <ImageIcon className="h-8 w-8 text-[#818cf8]" />;
+    if (type.startsWith("image/")) return <ImageIcon className="h-8 w-8 text-primary" />;
     if (type.includes("pdf")) return <FileText className="h-8 w-8 text-[#ef4444]" />;
     if (type.includes("json") || type.includes("typescript") || type.includes("javascript")) return <FileCode className="h-8 w-8 text-[#22c55e]" />;
-    return <File className="h-8 w-8 text-[#737373]" />;
+    return <File className="h-8 w-8 text-muted-foreground" />;
   };
 
   const formatSize = (bytes: number) => {
@@ -167,15 +167,15 @@ export function FileGrid({ files: initialFiles, clients }: FileGridProps) {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight text-[#F5F5F5]">Documents & Files</h2>
-          <p className="text-sm text-[#737373]">Central repository for project assets, contracts, and references.</p>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">Documents & Files</h2>
+          <p className="text-sm text-muted-foreground">Central repository for project assets, contracts, and references.</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center space-x-2 bg-[#111111] border border-[#262626] rounded-md px-3 py-2 w-full md:w-64">
-            <Upload className="h-4 w-4 text-[#737373]" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search files…" className="w-full bg-transparent border-0 outline-none text-sm placeholder:text-[#737373] text-[#F5F5F5]" />
+          <div className="flex items-center space-x-2 bg-card border border-border rounded-md px-3 py-2 w-full md:w-64">
+            <Upload className="h-4 w-4 text-muted-foreground" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search files…" className="w-full bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground text-foreground" />
           </div>
-          <Button onClick={() => fileInputRef.current?.click()} className="bg-[#F5F5F5] hover:bg-[#E5E5E5] text-[#0A0A0A] font-medium shrink-0">
+          <Button onClick={() => fileInputRef.current?.click()} className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium shrink-0">
             <Plus className="h-4 w-4 mr-1" /> Upload File
           </Button>
           <input ref={fileInputRef} type="file" className="hidden" onChange={onFilePicked} />
@@ -184,9 +184,9 @@ export function FileGrid({ files: initialFiles, clients }: FileGridProps) {
 
       {/* Upload metadata form */}
       {showForm && pendingFile && (
-        <div className="rounded-xl border border-[#262626] bg-[#111111] p-5">
-          <h3 className="text-sm font-semibold text-[#F5F5F5] mb-1">Upload: <span className="text-[#818cf8]">{pendingFile.name}</span> <span className="text-[#737373] text-xs font-normal">({formatSize(pendingFile.size)})</span></h3>
-          <p className="text-xs text-[#737373] mb-4">Choose a client to associate this file with.</p>
+        <div className="rounded-xl border border-border bg-card p-5">
+          <h3 className="text-sm font-semibold text-foreground mb-1">Upload: <span className="text-primary">{pendingFile.name}</span> <span className="text-muted-foreground text-xs font-normal">({formatSize(pendingFile.size)})</span></h3>
+          <p className="text-xs text-muted-foreground mb-4">Choose a client to associate this file with.</p>
           <UploadForm clientId={clientId} description={description} onChange={handleFormChange} clients={clients} error={error} uploading={isPending} onUpload={handleUpload} onCancel={() => { setShowForm(false); setPendingFile(null); }} />
         </div>
       )}
@@ -194,39 +194,39 @@ export function FileGrid({ files: initialFiles, clients }: FileGridProps) {
       {/* File grid */}
       {filtered.length === 0 && !showForm ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <File className="h-10 w-10 text-[#404040] mb-4" />
-          <p className="text-[#F5F5F5] font-medium mb-1">No files yet</p>
-          <p className="text-sm text-[#737373] mb-4">Upload your first file to get started.</p>
-          <Button onClick={() => fileInputRef.current?.click()} size="sm" className="bg-[#F5F5F5] hover:bg-[#E5E5E5] text-[#0A0A0A]">
+          <File className="h-10 w-10 text-muted-foreground mb-4" />
+          <p className="text-foreground font-medium mb-1">No files yet</p>
+          <p className="text-sm text-muted-foreground mb-4">Upload your first file to get started.</p>
+          <Button onClick={() => fileInputRef.current?.click()} size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground">
             <Plus className="h-4 w-4 mr-1" /> Upload File
           </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {/* Upload card */}
-          <div onClick={() => fileInputRef.current?.click()} className="group rounded-xl border border-dashed border-[#404040] bg-[#111111]/50 hover:bg-[#111111] hover:border-[#737373] transition-colors p-6 flex flex-col items-center justify-center gap-3 cursor-pointer min-h-[200px]">
-            <div className="h-12 w-12 rounded-full bg-[#171717] flex items-center justify-center group-hover:bg-[#262626] transition-colors">
-              <Upload className="h-5 w-5 text-[#A3A3A3] group-hover:text-[#F5F5F5]" />
+          <div onClick={() => fileInputRef.current?.click()} className="group rounded-xl border border-dashed border-muted bg-card/50 hover:bg-card hover:border-[#737373] transition-colors p-6 flex flex-col items-center justify-center gap-3 cursor-pointer min-h-[200px]">
+            <div className="h-12 w-12 rounded-full bg-accent flex items-center justify-center group-hover:bg-accent transition-colors">
+              <Upload className="h-5 w-5 text-muted-foreground group-hover:text-foreground" />
             </div>
-            <p className="text-sm font-medium text-[#F5F5F5]">Upload New File</p>
-            <p className="text-xs text-[#737373] text-center">Click to browse</p>
+            <p className="text-sm font-medium text-foreground">Upload New File</p>
+            <p className="text-xs text-muted-foreground text-center">Click to browse</p>
           </div>
 
           {filtered.map((file) => (
-            <div key={file.id} className="group rounded-xl border border-[#262626] bg-[#111111] hover:border-[#404040] transition-colors flex flex-col min-h-[200px] overflow-hidden relative">
+            <div key={file.id} className="group rounded-xl border border-border bg-card hover:border-muted transition-colors flex flex-col min-h-[200px] overflow-hidden relative">
               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="secondary" className="h-8 w-8 p-0 bg-[#0A0A0A]/80 hover:bg-[#171717] text-[#F5F5F5] border border-[#262626]">
+                    <Button variant="secondary" className="h-8 w-8 p-0 bg-background/80 hover:bg-accent text-foreground border border-border">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-[#111111] border-[#262626] text-[#F5F5F5]">
-                    <DropdownMenuLabel className="text-[#737373]">Actions</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => window.open(file.file_url, "_blank")} className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]">
+                  <DropdownMenuContent align="end" className="bg-card border-border text-foreground">
+                    <DropdownMenuLabel className="text-muted-foreground">Actions</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => window.open(file.file_url, "_blank")} className="cursor-pointer hover:bg-accent focus:bg-accent">
                       <Download className="mr-2 h-4 w-4" /> Download
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-[#262626]" />
+                    <DropdownMenuSeparator className="bg-accent" />
                     <DropdownMenuItem onClick={() => handleDelete(file)} className="cursor-pointer text-[#ef4444] hover:bg-[#ef4444]/10 focus:bg-[#ef4444]/10">
                       <Trash2 className="mr-2 h-4 w-4" /> Delete
                     </DropdownMenuItem>
@@ -234,16 +234,16 @@ export function FileGrid({ files: initialFiles, clients }: FileGridProps) {
                 </DropdownMenu>
               </div>
 
-              <div className="flex-1 flex items-center justify-center p-6 bg-[#171717]/30 border-b border-[#262626]">
+              <div className="flex-1 flex items-center justify-center p-6 bg-accent/30 border-b border-border">
                 {getIcon(file.file_type)}
               </div>
 
               <div className="p-4 flex flex-col gap-1">
-                <h4 className="text-sm font-medium text-[#F5F5F5] truncate" title={file.file_name}>{file.file_name}</h4>
+                <h4 className="text-sm font-medium text-foreground truncate" title={file.file_name}>{file.file_name}</h4>
                 {file.clients?.company_name && (
-                  <span className="text-xs text-[#818cf8] truncate">{file.clients.company_name}</span>
+                  <span className="text-xs text-primary truncate">{file.clients.company_name}</span>
                 )}
-                <div className="flex items-center justify-between text-xs text-[#737373] mt-1">
+                <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
                   <span>{formatSize(file.file_size)}</span>
                   <span>{format(new Date(file.created_at), "MMM d, yyyy")}</span>
                 </div>
@@ -253,7 +253,7 @@ export function FileGrid({ files: initialFiles, clients }: FileGridProps) {
         </div>
       )}
 
-      <p className="text-xs text-[#737373]">{filtered.length} file{filtered.length !== 1 ? "s" : ""}</p>
+      <p className="text-xs text-muted-foreground">{filtered.length} file{filtered.length !== 1 ? "s" : ""}</p>
     </div>
   );
 }

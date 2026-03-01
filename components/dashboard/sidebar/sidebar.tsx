@@ -85,10 +85,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             href={overviewItem.href}
             onClick={onNavigate}
             className={cn(
-              "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[#111111]",
+              "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-card",
               pathname === overviewItem.href
-                ? "bg-[#111111] text-[#818cf8] before:absolute before:left-0 before:h-6 before:w-1 before:rounded-r-full before:bg-[#818cf8]"
-                : "text-[#737373] hover:text-[#F5F5F5]"
+                ? "bg-card text-primary before:absolute before:left-0 before:h-6 before:w-1 before:rounded-r-full before:bg-primary"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             <LayoutDashboard className="h-4 w-4" />
@@ -97,7 +97,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
           {navigationGroups.map((group) => (
             <div key={group.name} className="space-y-3">
-              <h4 className="px-3 text-xs font-semibold tracking-wider text-[#404040] uppercase">
+              <h4 className="px-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                 {group.name}
               </h4>
               <div className="space-y-1">
@@ -109,16 +109,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                       href={item.href}
                       onClick={onNavigate}
                       className={cn(
-                        "relative group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[#111111]",
+                        "relative group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-card",
                         isActive
-                          ? "bg-[#111111] text-[#818cf8] before:absolute before:left-0 before:h-6 before:w-1 before:rounded-r-full before:bg-[#818cf8]"
-                          : "text-[#737373] hover:text-[#F5F5F5]"
+                          ? "bg-card text-primary before:absolute before:left-0 before:h-6 before:w-1 before:rounded-r-full before:bg-primary"
+                          : "text-muted-foreground hover:text-foreground"
                       )}
                     >
                       <item.icon
                         className={cn(
                           "h-4 w-4 transition-colors",
-                          isActive ? "text-[#818cf8]" : "group-hover:text-[#F5F5F5]"
+                          isActive ? "text-primary" : "group-hover:text-foreground"
                         )}
                       />
                       {item.name}
@@ -137,7 +137,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 /** Desktop inline sidebar — hidden below lg breakpoint */
 export function Sidebar() {
   return (
-    <div className="hidden lg:flex h-full w-[260px] flex-col border-r border-[#262626] bg-[#0A0A0A] shrink-0">
+    <div className="hidden lg:flex h-full w-[260px] flex-col border-r border-border bg-background shrink-0">
       <SidebarContent />
     </div>
   );
@@ -152,7 +152,7 @@ export function MobileSidebar() {
       <SheetContent
         side="left"
         showCloseButton={false}
-        className="w-[260px] p-0 bg-[#0A0A0A] border-[#262626] flex flex-col"
+        className="w-[260px] p-0 bg-background border-border flex flex-col"
       >
         <SidebarContent onNavigate={() => setMobileOpen(false)} />
       </SheetContent>

@@ -9,7 +9,7 @@ const PDFDownloadLink = dynamic(
   () => import("@react-pdf/renderer").then((mod) => mod.PDFDownloadLink),
   {
     ssr: false,
-    loading: () => <span className="text-[#737373] text-sm flex items-center"><Download className="h-4 w-4 mr-2" /> Preparing PDF...</span>,
+    loading: () => <span className="text-muted-foreground text-sm flex items-center"><Download className="h-4 w-4 mr-2" /> Preparing PDF...</span>,
   }
 );
 
@@ -168,7 +168,7 @@ export function InvoicePdfDownload({ invoice }: { invoice: Invoice }) {
       >
         {({ loading }) =>
           loading ? (
-            <span className="text-[#737373] text-sm flex items-center">
+            <span className="text-muted-foreground text-sm flex items-center">
               <Download className="h-4 w-4 mr-2" /> Preparing PDF...
             </span>
           ) : (

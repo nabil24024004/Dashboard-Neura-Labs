@@ -113,22 +113,22 @@ export function MeetingsDataTable({ columns, data: initialData }: MeetingsDataTa
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0 text-[#737373] hover:text-[#F5F5F5] hover:bg-[#171717]">
+            <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-accent">
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-[#111111] border-[#262626] text-[#F5F5F5]">
+          <DropdownMenuContent align="end" className="bg-card border-border text-foreground">
             {meeting.status !== "Completed" && (
-              <DropdownMenuItem onClick={() => handleStatusChange(meeting.id, "Completed")} className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]">
+              <DropdownMenuItem onClick={() => handleStatusChange(meeting.id, "Completed")} className="cursor-pointer hover:bg-accent focus:bg-accent">
                 Mark Completed
               </DropdownMenuItem>
             )}
             {meeting.status === "Scheduled" && (
-              <DropdownMenuItem onClick={() => handleStatusChange(meeting.id, "Cancelled")} className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]">
+              <DropdownMenuItem onClick={() => handleStatusChange(meeting.id, "Cancelled")} className="cursor-pointer hover:bg-accent focus:bg-accent">
                 Cancel Meeting
               </DropdownMenuItem>
             )}
-            <DropdownMenuSeparator className="bg-[#262626]" />
+            <DropdownMenuSeparator className="bg-accent" />
             <DropdownMenuItem onClick={() => handleDelete(meeting.id)} className="cursor-pointer text-[#ef4444] focus:text-[#ef4444] hover:bg-[#ef4444]/10 focus:bg-[#ef4444]/10">
               Delete
             </DropdownMenuItem>
@@ -158,63 +158,63 @@ export function MeetingsDataTable({ columns, data: initialData }: MeetingsDataTa
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight text-[#F5F5F5]">Meetings & Calendar</h2>
-          <p className="text-sm text-[#737373]">Manage your scheduled calls and meeting notes.</p>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">Meetings & Calendar</h2>
+          <p className="text-sm text-muted-foreground">Manage your scheduled calls and meeting notes.</p>
         </div>
-        <Button onClick={() => { setShowScheduleModal(true); setError(null); }} className="bg-[#F5F5F5] hover:bg-[#E5E5E5] text-[#0A0A0A] font-medium">
+        <Button onClick={() => { setShowScheduleModal(true); setError(null); }} className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium">
           <Plus className="h-4 w-4 mr-1" /> Schedule Meeting
         </Button>
       </div>
 
       {/* Schedule Modal */}
       {showScheduleModal && (
-        <div className="rounded-xl border border-[#262626] bg-[#111111] p-5 space-y-3">
-          <h3 className="text-sm font-semibold text-[#F5F5F5]">New Meeting</h3>
+        <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">New Meeting</h3>
           {error && <p className="text-xs text-[#ef4444] bg-[#ef4444]/10 border border-[#ef4444]/20 rounded px-3 py-2">{error}</p>}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <label className="text-xs text-[#737373] mb-1 block">Meeting Title *</label>
-              <Input value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="Discovery Call" className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] placeholder:text-[#404040] h-9" />
+              <label className="text-xs text-muted-foreground mb-1 block">Meeting Title *</label>
+              <Input value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))} placeholder="Discovery Call" className="bg-background border-border text-foreground placeholder:text-muted-foreground h-9" />
             </div>
             <div>
-              <label className="text-xs text-[#737373] mb-1 block">Client *</label>
-              <select value={form.client_id} onChange={(e) => setForm((p) => ({ ...p, client_id: e.target.value }))} className="w-full h-9 rounded-md border border-[#262626] bg-[#0A0A0A] px-3 text-sm text-[#F5F5F5] outline-none">
+              <label className="text-xs text-muted-foreground mb-1 block">Client *</label>
+              <select value={form.client_id} onChange={(e) => setForm((p) => ({ ...p, client_id: e.target.value }))} className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none">
                 <option value="">Select client…</option>
                 {clients.map((c) => <option key={c.id} value={c.id}>{c.company_name}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs text-[#737373] mb-1 block">Project (optional)</label>
-              <select value={form.project_id} onChange={(e) => setForm((p) => ({ ...p, project_id: e.target.value }))} className="w-full h-9 rounded-md border border-[#262626] bg-[#0A0A0A] px-3 text-sm text-[#F5F5F5] outline-none">
+              <label className="text-xs text-muted-foreground mb-1 block">Project (optional)</label>
+              <select value={form.project_id} onChange={(e) => setForm((p) => ({ ...p, project_id: e.target.value }))} className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none">
                 <option value="">None</option>
                 {projectOptions.map((p) => <option key={p.id} value={p.id}>{p.project_name}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs text-[#737373] mb-1 block">Date & Time *</label>
-              <Input type="datetime-local" value={form.scheduled_at} onChange={(e) => setForm((p) => ({ ...p, scheduled_at: e.target.value }))} className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] h-9" />
+              <label className="text-xs text-muted-foreground mb-1 block">Date & Time *</label>
+              <Input type="datetime-local" value={form.scheduled_at} onChange={(e) => setForm((p) => ({ ...p, scheduled_at: e.target.value }))} className="bg-background border-border text-foreground h-9" />
             </div>
             <div>
-              <label className="text-xs text-[#737373] mb-1 block">Duration (min)</label>
-              <Input type="number" value={form.duration_minutes} onChange={(e) => setForm((p) => ({ ...p, duration_minutes: e.target.value }))} placeholder="30" className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] placeholder:text-[#404040] h-9" />
+              <label className="text-xs text-muted-foreground mb-1 block">Duration (min)</label>
+              <Input type="number" value={form.duration_minutes} onChange={(e) => setForm((p) => ({ ...p, duration_minutes: e.target.value }))} placeholder="30" className="bg-background border-border text-foreground placeholder:text-muted-foreground h-9" />
             </div>
             <div>
-              <label className="text-xs text-[#737373] mb-1 block">Platform</label>
-              <select value={form.platform} onChange={(e) => setForm((p) => ({ ...p, platform: e.target.value }))} className="w-full h-9 rounded-md border border-[#262626] bg-[#0A0A0A] px-3 text-sm text-[#F5F5F5] outline-none">
+              <label className="text-xs text-muted-foreground mb-1 block">Platform</label>
+              <select value={form.platform} onChange={(e) => setForm((p) => ({ ...p, platform: e.target.value }))} className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none">
                 <option value="">Select…</option>
                 {["Zoom", "Google Meet", "Microsoft Teams", "Phone", "In Person"].map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs text-[#737373] mb-1 block">Meeting URL</label>
-              <Input value={form.meeting_url} onChange={(e) => setForm((p) => ({ ...p, meeting_url: e.target.value }))} placeholder="https://zoom.us/j/…" className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] placeholder:text-[#404040] h-9" />
+              <label className="text-xs text-muted-foreground mb-1 block">Meeting URL</label>
+              <Input value={form.meeting_url} onChange={(e) => setForm((p) => ({ ...p, meeting_url: e.target.value }))} placeholder="https://zoom.us/j/…" className="bg-background border-border text-foreground placeholder:text-muted-foreground h-9" />
             </div>
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button size="sm" variant="ghost" disabled={isPending} onClick={() => setShowScheduleModal(false)} className="text-[#A3A3A3]">Cancel</Button>
-            <Button size="sm" disabled={isPending} onClick={handleSchedule} className="bg-[#F5F5F5] hover:bg-[#E5E5E5] text-[#0A0A0A]">
+            <Button size="sm" variant="ghost" disabled={isPending} onClick={() => setShowScheduleModal(false)} className="text-muted-foreground">Cancel</Button>
+            <Button size="sm" disabled={isPending} onClick={handleSchedule} className="bg-primary hover:bg-primary/90 text-primary-foreground">
               {isPending && <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />}
               Schedule
             </Button>
@@ -223,24 +223,24 @@ export function MeetingsDataTable({ columns, data: initialData }: MeetingsDataTa
       )}
 
       {/* Search bar */}
-      <div className="flex items-center space-x-2 bg-[#111111] border border-[#262626] rounded-md px-3 py-2 w-full max-w-sm">
-        <Search className="h-4 w-4 text-[#737373]" />
+      <div className="flex items-center space-x-2 bg-card border border-border rounded-md px-3 py-2 w-full max-w-sm">
+        <Search className="h-4 w-4 text-muted-foreground" />
         <input
           placeholder="Search meetings..."
           value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
           onChange={(e) => table.getColumn("title")?.setFilterValue(e.target.value)}
-          className="w-full bg-transparent border-0 outline-none text-sm placeholder:text-[#737373] text-[#F5F5F5]"
+          className="w-full bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground text-foreground"
         />
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-[#262626] bg-[#111111] overflow-x-auto">
+      <div className="rounded-xl border border-border bg-card overflow-x-auto">
         <Table>
-          <TableHeader className="bg-[#171717] border-b border-[#262626]">
+          <TableHeader className="bg-accent border-b border-border">
             {table.getHeaderGroups().map((hg) => (
-              <TableRow key={hg.id} className="border-b border-[#262626] hover:bg-transparent">
+              <TableRow key={hg.id} className="border-b border-border hover:bg-transparent">
                 {hg.headers.map((header) => (
-                  <TableHead key={header.id} className="text-[#A3A3A3] font-medium h-10">
+                  <TableHead key={header.id} className="text-muted-foreground font-medium h-10">
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
@@ -250,7 +250,7 @@ export function MeetingsDataTable({ columns, data: initialData }: MeetingsDataTa
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} className="border-b border-[#262626] hover:bg-[#171717]/50">
+                <TableRow key={row.id} className="border-b border-border hover:bg-accent/50">
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="py-3">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -262,9 +262,9 @@ export function MeetingsDataTable({ columns, data: initialData }: MeetingsDataTa
               <TableRow>
                 <TableCell colSpan={allColumns.length} className="h-40 text-center">
                   <div className="flex flex-col items-center gap-3">
-                    <CalendarClock className="h-8 w-8 text-[#404040]" />
-                    <p className="text-[#737373] text-sm">No meetings scheduled yet.</p>
-                    <Button size="sm" onClick={() => setShowScheduleModal(true)} className="bg-[#F5F5F5] hover:bg-[#E5E5E5] text-[#0A0A0A]">
+                    <CalendarClock className="h-8 w-8 text-muted-foreground" />
+                    <p className="text-muted-foreground text-sm">No meetings scheduled yet.</p>
+                    <Button size="sm" onClick={() => setShowScheduleModal(true)} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                       <Plus className="h-4 w-4 mr-1" /> Schedule a meeting
                     </Button>
                   </div>
@@ -276,11 +276,11 @@ export function MeetingsDataTable({ columns, data: initialData }: MeetingsDataTa
       </div>
 
       <div className="flex items-center justify-end gap-2">
-        <span className="flex-1 text-sm text-[#737373]">
+        <span className="flex-1 text-sm text-muted-foreground">
           {table.getFilteredRowModel().rows.length} meeting{table.getFilteredRowModel().rows.length !== 1 ? "s" : ""}
         </span>
-        <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()} className="bg-[#111111] border-[#262626] hover:bg-[#171717] hover:text-[#F5F5F5] disabled:opacity-50">Previous</Button>
-        <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()} className="bg-[#111111] border-[#262626] hover:bg-[#171717] hover:text-[#F5F5F5] disabled:opacity-50">Next</Button>
+        <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()} className="bg-card border-border hover:bg-accent hover:text-foreground disabled:opacity-50">Previous</Button>
+        <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()} className="bg-card border-border hover:bg-accent hover:text-foreground disabled:opacity-50">Next</Button>
       </div>
     </div>
   );

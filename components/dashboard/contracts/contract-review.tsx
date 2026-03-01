@@ -72,10 +72,10 @@ export function ContractReview({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-[#F5F5F5]">
+        <h2 className="text-xl font-semibold text-foreground">
           Review & Generate
         </h2>
-        <p className="text-sm text-[#737373] mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Review all the details below. Click &quot;Edit&quot; on any section to
           make changes.
         </p>
@@ -83,8 +83,8 @@ export function ContractReview({
 
       {/* Contract type badge */}
       <div className="flex items-center gap-2 text-sm">
-        <span className="text-[#737373]">Contract Type:</span>
-        <span className="px-2 py-0.5 rounded-md bg-[#818cf8]/10 text-[#818cf8] text-xs font-medium border border-[#818cf8]/20">
+        <span className="text-muted-foreground">Contract Type:</span>
+        <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium border border-[#818cf8]/20">
           {schema.name}
         </span>
       </div>
@@ -93,10 +93,10 @@ export function ContractReview({
       {schema.sections.map((section, sectionIdx) => (
         <div
           key={section.id}
-          className="rounded-xl border border-[#262626] bg-[#111111] overflow-hidden"
+          className="rounded-xl border border-border bg-card overflow-hidden"
         >
-          <div className="flex items-center justify-between px-5 py-3 bg-[#171717] border-b border-[#262626]">
-            <h3 className="text-sm font-semibold text-[#F5F5F5]">
+          <div className="flex items-center justify-between px-5 py-3 bg-accent border-b border-border">
+            <h3 className="text-sm font-semibold text-foreground">
               {section.title}
             </h3>
             <Button
@@ -104,7 +104,7 @@ export function ContractReview({
               size="sm"
               onClick={() => onEditSection(sectionIdx)}
               disabled={busy}
-              className="text-[#818cf8] hover:text-[#a5b4fc] hover:bg-[#818cf8]/10 h-7 px-2"
+              className="text-primary hover:text-[#a5b4fc] hover:bg-primary/10 h-7 px-2"
             >
               <Pencil className="h-3 w-3 mr-1" /> Edit
             </Button>
@@ -119,10 +119,10 @@ export function ContractReview({
                 if (rows.length === 0)
                   return (
                     <div key={field.key} className="space-y-1">
-                      <p className="text-xs text-[#737373] uppercase tracking-wider">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">
                         {field.label}
                       </p>
-                      <p className="text-sm text-[#404040]">
+                      <p className="text-sm text-muted-foreground">
                         No entries added
                       </p>
                     </div>
@@ -130,18 +130,18 @@ export function ContractReview({
 
                 return (
                   <div key={field.key} className="space-y-2">
-                    <p className="text-xs text-[#737373] uppercase tracking-wider">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">
                       {field.label}
                     </p>
                     <div className="space-y-1.5">
                       {rows.map((row, i) => (
                         <div
                           key={i}
-                          className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[#F5F5F5] bg-[#0A0A0A] rounded-lg px-3 py-2 border border-[#262626]"
+                          className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground bg-background rounded-lg px-3 py-2 border border-border"
                         >
                           {field.repeatableFields?.map((sf) => (
                             <span key={sf.key}>
-                              <span className="text-[#737373] text-xs">
+                              <span className="text-muted-foreground text-xs">
                                 {sf.label}:{" "}
                               </span>
                               {displayValue(sf.type, row[sf.key], sf.suffix)}
@@ -157,10 +157,10 @@ export function ContractReview({
               // Standard fields
               return (
                 <div key={field.key} className="flex items-baseline gap-2">
-                  <p className="text-xs text-[#737373] min-w-[140px] shrink-0">
+                  <p className="text-xs text-muted-foreground min-w-[140px] shrink-0">
                     {field.label}
                   </p>
-                  <p className="text-sm text-[#F5F5F5]">
+                  <p className="text-sm text-foreground">
                     {displayValue(field.type, val, field.suffix)}
                   </p>
                 </div>
@@ -171,12 +171,12 @@ export function ContractReview({
       ))}
 
       {/* Actions */}
-      <div className="flex items-center justify-between pt-4 border-t border-[#262626]">
+      <div className="flex items-center justify-between pt-4 border-t border-border">
         <Button
           variant="ghost"
           onClick={onBack}
           disabled={busy}
-          className="text-[#737373] hover:text-[#F5F5F5]"
+          className="text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="h-4 w-4 mr-1" /> Back
         </Button>
@@ -185,7 +185,7 @@ export function ContractReview({
             variant="outline"
             onClick={onSaveDraft}
             disabled={busy}
-            className="bg-[#111111] border-[#262626] hover:bg-[#171717] text-[#F5F5F5]"
+            className="bg-card border-border hover:bg-accent text-foreground"
           >
             {savingDraft ? (
               <Loader2 className="h-4 w-4 mr-1 animate-spin" />

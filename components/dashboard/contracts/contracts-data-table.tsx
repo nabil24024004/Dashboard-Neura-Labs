@@ -148,7 +148,7 @@ export function ContractsDataTable({
               size="sm"
               variant="ghost"
               onClick={() => window.open(contract.pdf_url!, "_blank")}
-              className="h-7 px-2 text-[#818cf8] hover:text-[#a5b4fc] hover:bg-[#818cf8]/10"
+              className="h-7 px-2 text-primary hover:text-[#a5b4fc] hover:bg-primary/10"
             >
               <Download className="h-3.5 w-3.5 mr-1" /> PDF
             </Button>
@@ -157,7 +157,7 @@ export function ContractsDataTable({
             size="sm"
             variant="ghost"
             onClick={() => handleCopyLink(contract)}
-            className="h-7 px-2 text-[#737373] hover:text-[#F5F5F5] hover:bg-[#171717]"
+            className="h-7 px-2 text-muted-foreground hover:text-foreground hover:bg-accent"
           >
             {copiedId === contract.id ? (
               <CheckCircle2 className="h-3.5 w-3.5 text-[#22c55e]" />
@@ -169,16 +169,16 @@ export function ContractsDataTable({
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="h-8 w-8 p-0 text-[#737373] hover:text-[#F5F5F5] hover:bg-[#171717]"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-accent"
               >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="bg-[#111111] border-[#262626] text-[#F5F5F5]"
+              className="bg-card border-border text-foreground"
             >
-              <DropdownMenuLabel className="text-[#737373]">
+              <DropdownMenuLabel className="text-muted-foreground">
                 Actions
               </DropdownMenuLabel>
 
@@ -190,7 +190,7 @@ export function ContractsDataTable({
                       "_blank"
                     )
                   }
-                  className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]"
+                  className="cursor-pointer hover:bg-accent focus:bg-accent"
                 >
                   <ExternalLink className="mr-2 h-4 w-4" /> View Public Link
                 </DropdownMenuItem>
@@ -199,21 +199,21 @@ export function ContractsDataTable({
               {contract.share_token && (
                 <DropdownMenuItem
                   onClick={() => handleSendViaEmail(contract)}
-                  className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717] text-[#818cf8] focus:text-[#a5b4fc]"
+                  className="cursor-pointer hover:bg-accent focus:bg-accent text-primary focus:text-[#a5b4fc]"
                 >
                   <Mail className="mr-2 h-4 w-4" /> Send via Email
                 </DropdownMenuItem>
               )}
 
-              <DropdownMenuSeparator className="bg-[#262626]" />
+              <DropdownMenuSeparator className="bg-accent" />
 
-              <DropdownMenuLabel className="text-[#404040] text-xs">
+              <DropdownMenuLabel className="text-muted-foreground text-xs">
                 Change Status
               </DropdownMenuLabel>
               {contract.status !== "Sent" && (
                 <DropdownMenuItem
                   onClick={() => handleStatusChange(contract.id, "Sent")}
-                  className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]"
+                  className="cursor-pointer hover:bg-accent focus:bg-accent"
                 >
                   <Send className="mr-2 h-4 w-4" /> Mark as Sent
                 </DropdownMenuItem>
@@ -221,13 +221,13 @@ export function ContractsDataTable({
               {contract.status !== "Signed" && (
                 <DropdownMenuItem
                   onClick={() => handleStatusChange(contract.id, "Signed")}
-                  className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]"
+                  className="cursor-pointer hover:bg-accent focus:bg-accent"
                 >
                   <CheckCircle2 className="mr-2 h-4 w-4" /> Mark as Signed
                 </DropdownMenuItem>
               )}
 
-              <DropdownMenuSeparator className="bg-[#262626]" />
+              <DropdownMenuSeparator className="bg-accent" />
 
               <DropdownMenuItem
                 onClick={() => handleDelete(contract.id)}
@@ -270,10 +270,10 @@ export function ContractsDataTable({
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight text-[#F5F5F5]">
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">
             Contracts
           </h2>
-          <p className="text-sm text-[#737373]">
+          <p className="text-sm text-muted-foreground">
             Generate, manage, and share legal agreements.
           </p>
         </div>
@@ -287,25 +287,25 @@ export function ContractsDataTable({
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 rounded-xl border border-[#262626] bg-[#111111] flex flex-col justify-between h-24">
-          <span className="text-sm font-medium text-[#737373]">Drafts</span>
+        <div className="p-4 rounded-xl border border-border bg-card flex flex-col justify-between h-24">
+          <span className="text-sm font-medium text-muted-foreground">Drafts</span>
           <p className="text-2xl font-semibold text-[#f59e0b]">{draftCount}</p>
         </div>
-        <div className="p-4 rounded-xl border border-[#262626] bg-[#111111] flex flex-col justify-between h-24">
-          <span className="text-sm font-medium text-[#737373]">
+        <div className="p-4 rounded-xl border border-border bg-card flex flex-col justify-between h-24">
+          <span className="text-sm font-medium text-muted-foreground">
             Sent to Client
           </span>
           <p className="text-2xl font-semibold text-[#3b82f6]">{sentCount}</p>
         </div>
-        <div className="p-4 rounded-xl border border-[#262626] bg-[#111111] flex flex-col justify-between h-24">
-          <span className="text-sm font-medium text-[#737373]">Signed</span>
+        <div className="p-4 rounded-xl border border-border bg-card flex flex-col justify-between h-24">
+          <span className="text-sm font-medium text-muted-foreground">Signed</span>
           <p className="text-2xl font-semibold text-[#22c55e]">{signedCount}</p>
         </div>
       </div>
 
       {/* Search */}
-      <div className="flex items-center space-x-2 bg-[#111111] border border-[#262626] rounded-md px-3 py-2 w-full max-w-sm">
-        <Search className="h-4 w-4 text-[#737373]" />
+      <div className="flex items-center space-x-2 bg-card border border-border rounded-md px-3 py-2 w-full max-w-sm">
+        <Search className="h-4 w-4 text-muted-foreground" />
         <input
           placeholder="Search by title or client..."
           value={
@@ -314,23 +314,23 @@ export function ContractsDataTable({
           onChange={(e) =>
             table.getColumn("client_name")?.setFilterValue(e.target.value)
           }
-          className="w-full bg-transparent border-0 outline-none text-sm placeholder:text-[#737373] text-[#F5F5F5]"
+          className="w-full bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground text-foreground"
         />
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-[#262626] bg-[#111111] overflow-x-auto">
+      <div className="rounded-xl border border-border bg-card overflow-x-auto">
         <Table>
-          <TableHeader className="bg-[#171717] border-b border-[#262626]">
+          <TableHeader className="bg-accent border-b border-border">
             {table.getHeaderGroups().map((hg) => (
               <TableRow
                 key={hg.id}
-                className="border-b border-[#262626] hover:bg-transparent"
+                className="border-b border-border hover:bg-transparent"
               >
                 {hg.headers.map((h) => (
                   <TableHead
                     key={h.id}
-                    className="text-[#A3A3A3] font-medium h-10"
+                    className="text-muted-foreground font-medium h-10"
                   >
                     {h.isPlaceholder
                       ? null
@@ -345,7 +345,7 @@ export function ContractsDataTable({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className="border-b border-[#262626] hover:bg-[#171717]/50"
+                  className="border-b border-border hover:bg-accent/50"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="py-3">
@@ -364,8 +364,8 @@ export function ContractsDataTable({
                   className="h-40 text-center"
                 >
                   <div className="flex flex-col items-center gap-3">
-                    <FileText className="h-8 w-8 text-[#404040]" />
-                    <p className="text-[#737373] text-sm">
+                    <FileText className="h-8 w-8 text-muted-foreground" />
+                    <p className="text-muted-foreground text-sm">
                       No contracts yet. Create your first agreement.
                     </p>
                     <Button
@@ -385,7 +385,7 @@ export function ContractsDataTable({
 
       {/* Pagination */}
       <div className="flex items-center justify-end gap-2">
-        <span className="flex-1 text-sm text-[#737373]">
+        <span className="flex-1 text-sm text-muted-foreground">
           {table.getFilteredRowModel().rows.length} contract
           {table.getFilteredRowModel().rows.length !== 1 ? "s" : ""}
         </span>
@@ -394,7 +394,7 @@ export function ContractsDataTable({
           size="sm"
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
-          className="bg-[#111111] border-[#262626] hover:bg-[#171717] hover:text-[#F5F5F5] disabled:opacity-50"
+          className="bg-card border-border hover:bg-accent hover:text-foreground disabled:opacity-50"
         >
           Previous
         </Button>
@@ -403,7 +403,7 @@ export function ContractsDataTable({
           size="sm"
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
-          className="bg-[#111111] border-[#262626] hover:bg-[#171717] hover:text-[#F5F5F5] disabled:opacity-50"
+          className="bg-card border-border hover:bg-accent hover:text-foreground disabled:opacity-50"
         >
           Next
         </Button>

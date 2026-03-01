@@ -35,7 +35,7 @@ export const columns: ColumnDef<Invoice>[] = [
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="hover:bg-[#171717] hover:text-[#F5F5F5] -ml-4"
+          className="hover:bg-accent hover:text-foreground -ml-4"
         >
           Invoice #
           <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -43,8 +43,8 @@ export const columns: ColumnDef<Invoice>[] = [
       );
     },
     cell: ({ row }) => (
-      <div className="font-medium cursor-pointer hover:text-[#818cf8] transition-colors flex items-center gap-2">
-         <FileText className="h-4 w-4 text-[#737373]" />
+      <div className="font-medium cursor-pointer hover:text-primary transition-colors flex items-center gap-2">
+         <FileText className="h-4 w-4 text-muted-foreground" />
          {row.getValue("invoice_number")}
       </div>
     ),
@@ -52,7 +52,7 @@ export const columns: ColumnDef<Invoice>[] = [
   {
     accessorKey: "client_name",
     header: "Client",
-    cell: ({ row }) => <div className="text-[#F5F5F5] max-w-[200px] truncate" title={row.getValue("client_name")}>{row.getValue("client_name")}</div>,
+    cell: ({ row }) => <div className="text-foreground max-w-[200px] truncate" title={row.getValue("client_name")}>{row.getValue("client_name")}</div>,
   },
   {
     accessorKey: "amount",
@@ -76,10 +76,10 @@ export const columns: ColumnDef<Invoice>[] = [
         switch (s) {
           case "Paid": return "border-[#22c55e] text-[#22c55e] bg-[#22c55e]/10";
           case "Pending": return "border-[#3b82f6] text-[#3b82f6] bg-[#3b82f6]/10";
-          case "Draft": return "border-[#737373] text-[#737373] bg-[#171717]";
+          case "Draft": return "border-[#737373] text-muted-foreground bg-accent";
           case "Overdue": return "border-[#ef4444] text-[#ef4444] bg-[#ef4444]/10";
           case "Partial": return "border-[#f59e0b] text-[#f59e0b] bg-[#f59e0b]/10";
-          default: return "border-[#737373] text-[#737373] bg-[#171717]";
+          default: return "border-[#737373] text-muted-foreground bg-accent";
         }
       };
 
@@ -95,7 +95,7 @@ export const columns: ColumnDef<Invoice>[] = [
     header: "Issued",
     cell: ({ row }) => {
        const date = new Date(row.getValue("issue_date"));
-       return <div className="text-[#737373]">{format(date, "MMM d, yyyy")}</div>;
+       return <div className="text-muted-foreground">{format(date, "MMM d, yyyy")}</div>;
     },
   },
   {
@@ -105,7 +105,7 @@ export const columns: ColumnDef<Invoice>[] = [
        const date = new Date(row.getValue("due_date"));
        const isOverdue = date < new Date() && row.original.status !== "Paid";
        return (
-          <div className={`text-sm ${isOverdue ? "text-[#ef4444] font-medium" : "text-[#737373]"}`}>
+          <div className={`text-sm ${isOverdue ? "text-[#ef4444] font-medium" : "text-muted-foreground"}`}>
              {format(date, "MMM d, yyyy")}
           </div>
        );
@@ -119,26 +119,26 @@ export const columns: ColumnDef<Invoice>[] = [
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0 text-[#737373] hover:text-[#F5F5F5] hover:bg-[#171717]">
+            <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-accent">
               <span className="sr-only">Open menu</span>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-[#111111] border-[#262626] text-[#F5F5F5]">
-            <DropdownMenuLabel className="text-[#737373]">Actions</DropdownMenuLabel>
-            <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]">
+          <DropdownMenuContent align="end" className="bg-card border-border text-foreground">
+            <DropdownMenuLabel className="text-muted-foreground">Actions</DropdownMenuLabel>
+            <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent">
               View Details
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]">
+            <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent">
               <Mail className="h-4 w-4 mr-2" /> Send via Email
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717] p-0" asChild>
-              <div className="px-2 py-1.5 hover:bg-[#171717]">
+            <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent p-0" asChild>
+              <div className="px-2 py-1.5 hover:bg-accent">
                 <InvoicePdfDownload invoice={invoice} />
               </div>
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-[#262626]" />
-            <DropdownMenuItem className="cursor-pointer hover:bg-[#171717] focus:bg-[#171717]">
+            <DropdownMenuSeparator className="bg-accent" />
+            <DropdownMenuItem className="cursor-pointer hover:bg-accent focus:bg-accent">
               Record Payment
             </DropdownMenuItem>
             <DropdownMenuItem className="cursor-pointer text-[#ef4444] focus:text-[#ef4444] hover:bg-[#ef4444]/10 focus:bg-[#ef4444]/10" >

@@ -18,17 +18,17 @@ import { ChevronLeft, ChevronRight, Plus, Trash2, Info } from "lucide-react";
 function FieldLabel({ field }: { field: ContractField }) {
   return (
     <div className="flex items-center gap-1.5 mb-1">
-      <label className="text-xs text-[#A3A3A3] font-medium">
+      <label className="text-xs text-muted-foreground font-medium">
         {field.label}
         {field.required && <span className="text-[#ef4444] ml-0.5">*</span>}
       </label>
       {field.suffix && (
-        <span className="text-[10px] text-[#404040]">({field.suffix})</span>
+        <span className="text-[10px] text-muted-foreground">({field.suffix})</span>
       )}
       {field.tooltip && (
         <span className="group relative">
-          <Info className="h-3 w-3 text-[#404040] cursor-help" />
-          <span className="absolute left-0 bottom-full mb-1 hidden group-hover:block bg-[#1a1a1a] border border-[#262626] text-[#A3A3A3] text-[10px] p-2 rounded-md w-48 z-50 leading-relaxed">
+          <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+          <span className="absolute left-0 bottom-full mb-1 hidden group-hover:block bg-[#1a1a1a] border border-border text-muted-foreground text-[10px] p-2 rounded-md w-48 z-50 leading-relaxed">
             {field.tooltip}
           </span>
         </span>
@@ -54,7 +54,7 @@ function TextField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={field.placeholder}
-        className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] placeholder:text-[#404040] h-9"
+        className="bg-background border-border text-foreground placeholder:text-muted-foreground h-9"
       />
     </div>
   );
@@ -77,7 +77,7 @@ function TextareaField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={field.placeholder}
         rows={4}
-        className="w-full rounded-md border border-[#262626] bg-[#0A0A0A] px-3 py-2 text-sm text-[#F5F5F5] placeholder:text-[#404040] outline-none resize-y min-h-[80px] focus:border-[#818cf8]/50 transition-colors"
+        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none resize-y min-h-[80px] focus:border-[#818cf8]/50 transition-colors"
       />
     </div>
   );
@@ -102,7 +102,7 @@ function NumberField({
         placeholder={field.placeholder}
         min={field.min}
         step={field.type === "currency" ? "0.01" : "1"}
-        className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] placeholder:text-[#404040] h-9"
+        className="bg-background border-border text-foreground placeholder:text-muted-foreground h-9"
       />
     </div>
   );
@@ -121,7 +121,7 @@ function CurrencyField({
     <div>
       <FieldLabel field={field} />
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737373] text-sm">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
           $
         </span>
         <Input
@@ -131,7 +131,7 @@ function CurrencyField({
           placeholder={field.placeholder}
           step="0.01"
           min={0}
-          className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] placeholder:text-[#404040] h-9 pl-7"
+          className="bg-background border-border text-foreground placeholder:text-muted-foreground h-9 pl-7"
         />
       </div>
     </div>
@@ -154,7 +154,7 @@ function DateField({
         type="date"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] h-9 [color-scheme:dark]"
+        className="bg-background border-border text-foreground h-9 [color-scheme:dark]"
       />
     </div>
   );
@@ -175,7 +175,7 @@ function SelectField({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full h-9 rounded-md border border-[#262626] bg-[#0A0A0A] px-3 text-sm text-[#F5F5F5] outline-none focus:border-[#818cf8]/50 transition-colors"
+        className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-[#818cf8]/50 transition-colors"
       >
         <option value="">Select...</option>
         {field.options?.map((opt) => (
@@ -225,10 +225,10 @@ function RepeatableField({
         {value.map((row, idx) => (
           <div
             key={idx}
-            className="p-3 rounded-lg border border-[#262626] bg-[#0A0A0A]/50 space-y-2"
+            className="p-3 rounded-lg border border-border bg-background/50 space-y-2"
           >
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] text-[#404040] uppercase tracking-wider">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
                 Entry {idx + 1}
               </span>
               <button
@@ -289,7 +289,7 @@ function RepeatableField({
           variant="ghost"
           size="sm"
           onClick={addRow}
-          className="text-[#818cf8] hover:text-[#a5b4fc] hover:bg-[#818cf8]/10"
+          className="text-primary hover:text-[#a5b4fc] hover:bg-primary/10"
         >
           <Plus className="h-3.5 w-3.5 mr-1" /> Add Entry
         </Button>
@@ -410,24 +410,24 @@ export function ContractFormStep({
               <div
                 className={`h-2 flex-1 rounded-full transition-colors min-w-[40px] ${
                   i < currentSection
-                    ? "bg-[#818cf8]"
+                    ? "bg-primary"
                     : i === currentSection
-                    ? "bg-[#818cf8]/60"
-                    : "bg-[#262626]"
+                    ? "bg-primary/60"
+                    : "bg-accent"
                 }`}
               />
             </div>
           ))}
         </div>
         <div>
-          <p className="text-[10px] text-[#404040] uppercase tracking-wider">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
             Section {currentSection + 1} of {sections.length}
           </p>
-          <h3 className="text-lg font-semibold text-[#F5F5F5]">
+          <h3 className="text-lg font-semibold text-foreground">
             {section.title}
           </h3>
           {section.description && (
-            <p className="text-sm text-[#737373]">{section.description}</p>
+            <p className="text-sm text-muted-foreground">{section.description}</p>
           )}
         </div>
       </div>
@@ -459,13 +459,13 @@ export function ContractFormStep({
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center justify-between pt-4 border-t border-[#262626]">
+      <div className="flex items-center justify-between pt-4 border-t border-border">
         <div>
           {isFirst ? (
             <Button
               variant="ghost"
               onClick={onCancel}
-              className="text-[#737373] hover:text-[#F5F5F5]"
+              className="text-muted-foreground hover:text-foreground"
             >
               <ChevronLeft className="h-4 w-4 mr-1" /> Back to Types
             </Button>
@@ -473,7 +473,7 @@ export function ContractFormStep({
             <Button
               variant="ghost"
               onClick={onBack}
-              className="text-[#737373] hover:text-[#F5F5F5]"
+              className="text-muted-foreground hover:text-foreground"
             >
               <ChevronLeft className="h-4 w-4 mr-1" /> Previous
             </Button>
@@ -481,7 +481,7 @@ export function ContractFormStep({
         </div>
         <Button
           onClick={onNext}
-          className="bg-[#F5F5F5] hover:bg-[#E5E5E5] text-[#0A0A0A] font-medium"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
         >
           {isLast ? "Review" : "Next"}
           {!isLast && <ChevronRight className="h-4 w-4 ml-1" />}

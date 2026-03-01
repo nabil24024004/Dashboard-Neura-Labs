@@ -227,14 +227,14 @@ export function IntegrationsClient({ initialIntegrations, initialLoadError = nul
     <div className="flex flex-col gap-8 h-full max-w-7xl mx-auto w-full">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h2 className="text-xl font-semibold tracking-tight text-[#F5F5F5]">Integrations</h2>
-          <p className="text-sm text-[#737373]">Connect external tools and services to your workspace.</p>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">Integrations</h2>
+          <p className="text-sm text-muted-foreground">Connect external tools and services to your workspace.</p>
         </div>
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
             size="sm"
-            className="border-[#262626] text-[#A3A3A3] hover:text-[#F5F5F5] hover:bg-[#171717] gap-2"
+            className="border-border text-muted-foreground hover:text-foreground hover:bg-accent gap-2"
             onClick={() => setGuideOpen(!guideOpen)}
           >
             <BookOpen className="h-4 w-4" />
@@ -242,73 +242,73 @@ export function IntegrationsClient({ initialIntegrations, initialLoadError = nul
           </Button>
           <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="bg-[#F5F5F5] text-[#0A0A0A] hover:bg-[#E5E5E5] gap-2">
+              <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
                 <Plus className="h-4 w-4" />
                 Add Integration
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-[#111111] border-[#262626] text-[#F5F5F5]">
+            <DialogContent className="bg-card border-border text-foreground">
               <DialogHeader>
                 <DialogTitle>Add New Integration</DialogTitle>
-                <DialogDescription className="text-[#737373]">
+                <DialogDescription className="text-muted-foreground">
                   Configure a new external service to connect with your workspace.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#A3A3A3] mb-1.5">Name *</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">Name *</label>
                   <Input
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder="e.g., Slack, Zapier, Custom Webhook"
-                    className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] focus:border-[#404040]"
+                    className="bg-background border-border text-foreground focus:border-muted"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#A3A3A3] mb-1.5">Description</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">Description</label>
                   <Input
                     value={newDescription}
                     onChange={(e) => setNewDescription(e.target.value)}
                     placeholder="What does this integration do?"
-                    className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] focus:border-[#404040]"
+                    className="bg-background border-border text-foreground focus:border-muted"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#A3A3A3] mb-1.5">Category</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">Category</label>
                   <Input
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
                     placeholder="e.g., Communication, Productivity, CRM"
-                    className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] focus:border-[#404040]"
+                    className="bg-background border-border text-foreground focus:border-muted"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#A3A3A3] mb-1.5">Webhook URL</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">Webhook URL</label>
                   <Input
                     value={newWebhookUrl}
                     onChange={(e) => setNewWebhookUrl(e.target.value)}
                     placeholder="https://hooks.example.com/webhook"
-                    className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] focus:border-[#404040]"
+                    className="bg-background border-border text-foreground focus:border-muted"
                   />
-                  <p className="text-xs text-[#404040] mt-1">The endpoint where events will be sent</p>
+                  <p className="text-xs text-muted-foreground mt-1">The endpoint where events will be sent</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#A3A3A3] mb-1.5">API Key</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">API Key</label>
                   <Input
                     type="password"
                     value={newApiKey}
                     onChange={(e) => setNewApiKey(e.target.value)}
                     placeholder="Your API key or token"
-                    className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] focus:border-[#404040]"
+                    className="bg-background border-border text-foreground focus:border-muted"
                   />
-                  <p className="text-xs text-[#404040] mt-1">Stored securely, used for authenticating requests</p>
+                  <p className="text-xs text-muted-foreground mt-1">Stored securely, used for authenticating requests</p>
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="ghost" onClick={() => { setAddDialogOpen(false); resetForm(); }} className="text-[#737373] hover:text-[#F5F5F5] hover:bg-[#171717]">
+                <Button variant="ghost" onClick={() => { setAddDialogOpen(false); resetForm(); }} className="text-muted-foreground hover:text-foreground hover:bg-accent">
                   Cancel
                 </Button>
-                <Button onClick={handleAdd} disabled={isPending} className="bg-[#F5F5F5] text-[#0A0A0A] hover:bg-[#E5E5E5]">
+                <Button onClick={handleAdd} disabled={isPending} className="bg-primary text-primary-foreground hover:bg-primary/90">
                   {isPending ? "Adding..." : "Add Integration"}
                 </Button>
               </DialogFooter>
@@ -318,49 +318,49 @@ export function IntegrationsClient({ initialIntegrations, initialLoadError = nul
       </div>
 
       {initialLoadError && (
-        <div className="rounded-lg border border-[#f59e0b]/30 bg-[#f59e0b]/10 px-4 py-3 text-sm text-[#fbbf24]">
+        <div className="rounded-lg border border-[#f59e0b]/30 bg-[#f59e0b]/10 px-4 py-3 text-sm text-amber-700 dark:text-[#fbbf24]">
           {initialLoadError}
         </div>
       )}
 
       {/* Integration Guide */}
       {guideOpen && (
-        <div className="bg-[#111111] border border-[#262626] rounded-xl p-6 space-y-4">
+        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-[#F5F5F5] flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-[#818cf8]" />
+            <h3 className="text-lg font-medium text-foreground flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-primary" />
               Integration Setup Guide
             </h3>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-[#737373] hover:text-[#F5F5F5]" onClick={() => setGuideOpen(false)}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => setGuideOpen(false)}>
               <X className="h-4 w-4" />
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg bg-[#0A0A0A] border border-[#262626] space-y-2">
+            <div className="p-4 rounded-lg bg-background border border-border space-y-2">
               <div className="flex items-center gap-2">
-                <span className="h-6 w-6 rounded-full bg-[#6366f1]/20 text-[#818cf8] text-xs font-bold flex items-center justify-center">1</span>
-                <h4 className="text-sm font-medium text-[#F5F5F5]">Add Integration</h4>
+                <span className="h-6 w-6 rounded-full bg-[#6366f1]/20 text-primary text-xs font-bold flex items-center justify-center">1</span>
+                <h4 className="text-sm font-medium text-foreground">Add Integration</h4>
               </div>
-              <p className="text-xs text-[#737373]">Click &quot;Add Integration&quot; and provide a name, description, and category. Optionally set a webhook URL and API key.</p>
+              <p className="text-xs text-muted-foreground">Click &quot;Add Integration&quot; and provide a name, description, and category. Optionally set a webhook URL and API key.</p>
             </div>
-            <div className="p-4 rounded-lg bg-[#0A0A0A] border border-[#262626] space-y-2">
+            <div className="p-4 rounded-lg bg-background border border-border space-y-2">
               <div className="flex items-center gap-2">
-                <span className="h-6 w-6 rounded-full bg-[#6366f1]/20 text-[#818cf8] text-xs font-bold flex items-center justify-center">2</span>
-                <h4 className="text-sm font-medium text-[#F5F5F5]">Configure</h4>
+                <span className="h-6 w-6 rounded-full bg-[#6366f1]/20 text-primary text-xs font-bold flex items-center justify-center">2</span>
+                <h4 className="text-sm font-medium text-foreground">Configure</h4>
               </div>
-              <p className="text-xs text-[#737373]">Use the &quot;Manage&quot; button to update webhook URLs, API keys, or other configuration. Copy credentials to set up in the external tool.</p>
+              <p className="text-xs text-muted-foreground">Use the &quot;Manage&quot; button to update webhook URLs, API keys, or other configuration. Copy credentials to set up in the external tool.</p>
             </div>
-            <div className="p-4 rounded-lg bg-[#0A0A0A] border border-[#262626] space-y-2">
+            <div className="p-4 rounded-lg bg-background border border-border space-y-2">
               <div className="flex items-center gap-2">
-                <span className="h-6 w-6 rounded-full bg-[#6366f1]/20 text-[#818cf8] text-xs font-bold flex items-center justify-center">3</span>
-                <h4 className="text-sm font-medium text-[#F5F5F5]">Connect</h4>
+                <span className="h-6 w-6 rounded-full bg-[#6366f1]/20 text-primary text-xs font-bold flex items-center justify-center">3</span>
+                <h4 className="text-sm font-medium text-foreground">Connect</h4>
               </div>
-              <p className="text-xs text-[#737373]">Toggle the switch to mark the integration as connected. The status and last sync time will update automatically.</p>
+              <p className="text-xs text-muted-foreground">Toggle the switch to mark the integration as connected. The status and last sync time will update automatically.</p>
             </div>
           </div>
-          <div className="p-4 rounded-lg bg-[#0A0A0A] border border-[#262626]">
-            <h4 className="text-sm font-medium text-[#F5F5F5] mb-2">Supported Integration Types</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-[#737373]">
+          <div className="p-4 rounded-lg bg-background border border-border">
+            <h4 className="text-sm font-medium text-foreground mb-2">Supported Integration Types</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted-foreground">
               <span>Communication (Slack, Discord)</span>
               <span>Calendars (Google, Outlook)</span>
               <span>CRM (HubSpot, Salesforce)</span>
@@ -376,13 +376,13 @@ export function IntegrationsClient({ initialIntegrations, initialLoadError = nul
 
       {/* Integration Cards */}
       {integrations.length === 0 ? (
-        <div className="rounded-xl border border-[#262626] bg-[#111111] p-12 flex flex-col items-center justify-center gap-3">
-          <Plug className="h-12 w-12 text-[#262626]" />
-          <p className="text-sm text-[#737373]">No integrations configured yet.</p>
-          <p className="text-xs text-[#404040]">Add your first integration to connect external services to your workspace.</p>
+        <div className="rounded-xl border border-border bg-card p-12 flex flex-col items-center justify-center gap-3">
+          <Plug className="h-12 w-12 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">No integrations configured yet.</p>
+          <p className="text-xs text-muted-foreground">Add your first integration to connect external services to your workspace.</p>
           <Button
             size="sm"
-            className="bg-[#F5F5F5] text-[#0A0A0A] hover:bg-[#E5E5E5] gap-2 mt-2"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2 mt-2"
             onClick={() => setAddDialogOpen(true)}
           >
             <Plus className="h-4 w-4" />
@@ -392,11 +392,11 @@ export function IntegrationsClient({ initialIntegrations, initialLoadError = nul
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {integrations.map((integration) => (
-            <Card key={integration.id} className="bg-[#111111] border-[#262626] flex flex-col hover:border-[#404040] transition-colors group">
+            <Card key={integration.id} className="bg-card border-border flex flex-col hover:border-muted transition-colors group">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 rounded-lg bg-[#171717] border border-[#262626] group-hover:border-[#404040] transition-colors">
-                    <Plug className="h-6 w-6 text-[#F5F5F5]" />
+                  <div className="p-2 rounded-lg bg-accent border border-border group-hover:border-muted transition-colors">
+                    <Plug className="h-6 w-6 text-foreground" />
                   </div>
                   <Badge
                     variant="outline"
@@ -404,30 +404,30 @@ export function IntegrationsClient({ initialIntegrations, initialLoadError = nul
                       integration.status === "Connected"
                         ? "bg-[#22c55e]/10 text-[#22c55e] border-[#22c55e]/20"
                         : integration.status === "Pending"
-                        ? "bg-[#f59e0b]/10 text-[#f59e0b] border-[#f59e0b]/20"
-                        : "bg-[#737373]/10 text-[#737373] border-[#262626]"
+                          ? "bg-[#f59e0b]/10 text-[#f59e0b] border-[#f59e0b]/20"
+                          : "bg-muted text-muted-foreground border-border"
                     }
                   >
                     {integration.status}
                   </Badge>
                 </div>
-                <CardTitle className="text-[#F5F5F5] text-lg">{integration.name}</CardTitle>
-                <CardDescription className="text-[#737373] line-clamp-2">
+                <CardTitle className="text-foreground text-lg">{integration.name}</CardTitle>
+                <CardDescription className="text-muted-foreground line-clamp-2">
                   {integration.description || "No description provided"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-1 pb-4">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[#737373]">Category</span>
-                    <span className="text-[#F5F5F5] font-medium">{integration.category}</span>
+                    <span className="text-muted-foreground">Category</span>
+                    <span className="text-foreground font-medium">{integration.category}</span>
                   </div>
                   {integration.webhook_url && (
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-[#737373]">Webhook</span>
+                      <span className="text-muted-foreground">Webhook</span>
                       <button
                         onClick={() => copyToClipboard(integration.webhook_url!)}
-                        className="flex items-center gap-1 text-[#818cf8] hover:text-[#6366f1]"
+                        className="flex items-center gap-1 text-primary hover:text-[#6366f1]"
                       >
                         <Copy className="h-3 w-3" />
                         Copy URL
@@ -436,8 +436,8 @@ export function IntegrationsClient({ initialIntegrations, initialLoadError = nul
                   )}
                   {integration.status === "Connected" && integration.last_sync && (
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-[#737373]">Last Sync</span>
-                      <div className="flex items-center gap-1.5 text-[#F5F5F5] font-medium">
+                      <span className="text-muted-foreground">Last Sync</span>
+                      <div className="flex items-center gap-1.5 text-foreground font-medium">
                         <RefreshCw className="h-3 w-3 text-[#22c55e]" />
                         {formatTimeAgo(integration.last_sync)}
                       </div>
@@ -445,21 +445,21 @@ export function IntegrationsClient({ initialIntegrations, initialLoadError = nul
                   )}
                 </div>
               </CardContent>
-              <CardFooter className="pt-4 border-t border-[#262626] flex items-center justify-between">
+              <CardFooter className="pt-4 border-t border-border flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={integration.status === "Connected"}
                     onCheckedChange={() => toggleStatus(integration.id, integration.status)}
                     disabled={isPending}
                   />
-                  <span className="text-xs text-[#737373]">
+                  <span className="text-xs text-muted-foreground">
                     {integration.status === "Connected" ? "Active" : "Disabled"}
                   </span>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 text-[#F5F5F5] hover:bg-[#171717] gap-1.5"
+                  className="h-8 text-foreground hover:bg-accent gap-1.5"
                   onClick={() => setManageDialogOpen(integration.id)}
                 >
                   Manage
@@ -471,26 +471,26 @@ export function IntegrationsClient({ initialIntegrations, initialLoadError = nul
 
           {/* Add more card */}
           <Card
-            className="bg-[#0A0A0A] border-dashed border-[#262626] border-2 flex flex-col items-center justify-center p-8 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+            className="bg-background border-dashed border-border border-2 flex flex-col items-center justify-center p-8 opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
             onClick={() => setAddDialogOpen(true)}
           >
-            <div className="p-3 rounded-full bg-[#111111] mb-4">
-              <Plus className="h-8 w-8 text-[#404040]" />
+            <div className="p-3 rounded-full bg-card mb-4">
+              <Plus className="h-8 w-8 text-muted-foreground" />
             </div>
-            <p className="text-sm font-medium text-[#737373]">Add New Integration</p>
-            <p className="text-xs text-[#404040] mt-1">Connect another service</p>
+            <p className="text-sm font-medium text-muted-foreground">Add New Integration</p>
+            <p className="text-xs text-muted-foreground mt-1">Connect another service</p>
           </Card>
         </div>
       )}
 
       {/* Manage Dialog */}
       <Dialog open={!!manageDialogOpen} onOpenChange={(open) => !open && setManageDialogOpen(null)}>
-        <DialogContent className="bg-[#111111] border-[#262626] text-[#F5F5F5]">
+        <DialogContent className="bg-card border-border text-foreground">
           {managedIntegration && (
             <>
               <DialogHeader>
                 <DialogTitle>Manage: {managedIntegration.name}</DialogTitle>
-                <DialogDescription className="text-[#737373]">
+                <DialogDescription className="text-muted-foreground">
                   Update configuration or remove this integration.
                 </DialogDescription>
               </DialogHeader>
@@ -530,54 +530,54 @@ function ManageForm({
   return (
     <div className="space-y-4 py-4">
       <div>
-        <label className="block text-sm font-medium text-[#A3A3A3] mb-1.5">Description</label>
+        <label className="block text-sm font-medium text-muted-foreground mb-1.5">Description</label>
         <Input
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] focus:border-[#404040]"
+          className="bg-background border-border text-foreground focus:border-muted"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-[#A3A3A3] mb-1.5">Webhook URL</label>
+        <label className="block text-sm font-medium text-muted-foreground mb-1.5">Webhook URL</label>
         <div className="flex gap-2">
           <Input
             value={webhookUrl}
             onChange={(e) => setWebhookUrl(e.target.value)}
             placeholder="https://hooks.example.com/webhook"
-            className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] focus:border-[#404040]"
+            className="bg-background border-border text-foreground focus:border-muted"
           />
           {webhookUrl && (
-            <Button variant="outline" size="icon" className="border-[#262626] shrink-0" onClick={() => onCopy(webhookUrl)}>
+            <Button variant="outline" size="icon" className="border-border shrink-0" onClick={() => onCopy(webhookUrl)}>
               <Copy className="h-4 w-4" />
             </Button>
           )}
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium text-[#A3A3A3] mb-1.5">API Key</label>
+        <label className="block text-sm font-medium text-muted-foreground mb-1.5">API Key</label>
         <div className="flex gap-2">
           <Input
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder="Your API key or token"
-            className="bg-[#0A0A0A] border-[#262626] text-[#F5F5F5] focus:border-[#404040]"
+            className="bg-background border-border text-foreground focus:border-muted"
           />
           {apiKey && (
-            <Button variant="outline" size="icon" className="border-[#262626] shrink-0" onClick={() => onCopy(apiKey)}>
+            <Button variant="outline" size="icon" className="border-border shrink-0" onClick={() => onCopy(apiKey)}>
               <Copy className="h-4 w-4" />
             </Button>
           )}
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-xs text-[#737373] bg-[#0A0A0A] p-3 rounded-lg border border-[#262626]">
+      <div className="flex items-center justify-between text-xs text-muted-foreground bg-background p-3 rounded-lg border border-border">
         <span>Status: {integration.status}</span>
         <span>Category: {integration.category}</span>
         {integration.created_at && <span>Added: {new Date(integration.created_at).toLocaleDateString()}</span>}
       </div>
 
-      <div className="flex items-center justify-between pt-4 border-t border-[#262626]">
+      <div className="flex items-center justify-between pt-4 border-t border-border">
         {!confirmDelete ? (
           <Button
             variant="ghost"
@@ -599,14 +599,14 @@ function ManageForm({
             >
               Confirm Delete
             </Button>
-            <Button variant="ghost" size="sm" className="text-[#737373]" onClick={() => setConfirmDelete(false)}>
+            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setConfirmDelete(false)}>
               Cancel
             </Button>
           </div>
         )}
         <Button
           size="sm"
-          className="bg-[#F5F5F5] text-[#0A0A0A] hover:bg-[#E5E5E5]"
+          className="bg-primary text-primary-foreground hover:bg-primary/90"
           disabled={isPending}
           onClick={() =>
             onUpdate({

@@ -34,7 +34,7 @@ function statusColor(s: string) {
     case "Draft":
       return "border-[#f59e0b] text-[#f59e0b] bg-[#f59e0b]/10";
     default:
-      return "border-[#737373] text-[#737373] bg-[#171717]";
+      return "border-[#737373] text-muted-foreground bg-accent";
   }
 }
 
@@ -60,15 +60,15 @@ export const columns: ColumnDef<Contract>[] = [
       <Button
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        className="hover:bg-[#171717] hover:text-[#F5F5F5] -ml-4"
+        className="hover:bg-accent hover:text-foreground -ml-4"
       >
         Contract
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
     cell: ({ row }) => (
-      <div className="flex items-center gap-2 font-medium text-[#F5F5F5] max-w-[280px]">
-        <FileText className="h-4 w-4 text-[#737373] shrink-0" />
+      <div className="flex items-center gap-2 font-medium text-foreground max-w-[280px]">
+        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
         <span className="truncate">{row.getValue("title")}</span>
       </div>
     ),
@@ -77,7 +77,7 @@ export const columns: ColumnDef<Contract>[] = [
     accessorKey: "contract_type",
     header: "Type",
     cell: ({ row }) => (
-      <span className="px-2 py-0.5 rounded-md bg-[#818cf8]/10 text-[#818cf8] text-xs font-medium border border-[#818cf8]/20">
+      <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium border border-[#818cf8]/20">
         {typeLabel(row.getValue("contract_type"))}
       </span>
     ),
@@ -86,7 +86,7 @@ export const columns: ColumnDef<Contract>[] = [
     accessorKey: "client_name",
     header: "Client",
     cell: ({ row }) => (
-      <div className="text-[#F5F5F5]">
+      <div className="text-foreground">
         {row.getValue("client_name") || "—"}
       </div>
     ),
@@ -109,7 +109,7 @@ export const columns: ColumnDef<Contract>[] = [
       <Button
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        className="hover:bg-[#171717] hover:text-[#F5F5F5] -ml-4"
+        className="hover:bg-accent hover:text-foreground -ml-4"
       >
         Created
         <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -117,9 +117,9 @@ export const columns: ColumnDef<Contract>[] = [
     ),
     cell: ({ row }) => {
       const dateRaw = row.getValue("created_at") as string;
-      if (!dateRaw) return <div className="text-[#737373]">—</div>;
+      if (!dateRaw) return <div className="text-muted-foreground">—</div>;
       return (
-        <div className="text-[#737373]">
+        <div className="text-muted-foreground">
           {format(new Date(dateRaw), "MMM d, yyyy")}
         </div>
       );

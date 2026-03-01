@@ -52,16 +52,16 @@ export function ProjectsKanban({ initialProjects }: ProjectsKanbanProps) {
       <DragDropContext onDragEnd={onDragEnd}>
         {COLUMNS.map((colId) => {
           const columnProjects = projects.filter((p) => p.status === colId);
-          
+
           return (
-            <div key={colId} className="flex-shrink-0 w-[320px] bg-[#111111] rounded-xl border border-[#262626] flex flex-col max-h-full">
+            <div key={colId} className="flex-shrink-0 w-[320px] bg-card rounded-xl border border-border flex flex-col max-h-full">
               {/* Column Header */}
-              <div className="p-4 border-b border-[#262626] flex items-center justify-between sticky top-0 bg-[#171717] rounded-t-xl z-10">
+              <div className="p-4 border-b border-border flex items-center justify-between sticky top-0 bg-accent rounded-t-xl z-10">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-[#F5F5F5]">{colId}</h3>
-                  <Badge variant="secondary" className="bg-[#262626] text-[#A3A3A3] hover:bg-[#262626] border-0">{columnProjects.length}</Badge>
+                  <h3 className="font-semibold text-foreground">{colId}</h3>
+                  <Badge variant="secondary" className="bg-accent text-muted-foreground hover:bg-accent border-0">{columnProjects.length}</Badge>
                 </div>
-                <button className="text-[#737373] hover:text-[#F5F5F5] transition-colors p-1" title="Add Project">
+                <button className="text-muted-foreground hover:text-foreground transition-colors p-1" title="Add Project">
                   <CopyPlus className="h-4 w-4" />
                 </button>
               </div>
@@ -72,9 +72,8 @@ export function ProjectsKanban({ initialProjects }: ProjectsKanbanProps) {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`flex-1 p-3 overflow-y-auto min-h-[150px] transition-colors ${
-                      snapshot.isDraggingOver ? "bg-[#171717]/50" : ""
-                    }`}
+                    className={`flex-1 p-3 overflow-y-auto min-h-[150px] transition-colors ${snapshot.isDraggingOver ? "bg-accent/50" : ""
+                      }`}
                   >
                     {columnProjects.map((project, index) => (
                       <Draggable key={project.id} draggableId={project.id} index={index}>
@@ -83,46 +82,45 @@ export function ProjectsKanban({ initialProjects }: ProjectsKanbanProps) {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            className={`mb-3 p-4 bg-[#0A0A0A] border rounded-xl shadow-sm cursor-grab active:cursor-grabbing transition-colors ${
-                              snapshot.isDragging 
-                              ? "border-[#818cf8] shadow-md shadow-[#818cf8]/10 bg-[#111111]" 
-                              : "border-[#262626] hover:border-[#404040]"
-                            }`}
+                            className={`mb-3 p-4 bg-background border rounded-xl shadow-sm cursor-grab active:cursor-grabbing transition-colors ${snapshot.isDragging
+                                ? "border-[#818cf8] shadow-md shadow-[#818cf8]/10 bg-card"
+                                : "border-border hover:border-muted"
+                              }`}
                           >
-                             <div className="flex justify-between items-start mb-2">
-                               <h4 className="text-[#F5F5F5] font-medium leading-tight max-w-[85%]">{project.project_name}</h4>
-                               <button className="text-[#737373] hover:text-[#F5F5F5]">
-                                 <MoreHorizontal className="h-4 w-4" />
-                               </button>
-                             </div>
-                             <p className="text-xs text-[#737373] mb-4">{project.service_type}</p>
-                             
-                             {/* Progress Bar */}
-                             <div className="mb-4">
-                                <div className="flex justify-between text-xs mb-1">
-                                   <span className="text-[#737373]">Progress</span>
-                                   <span className="text-[#A3A3A3]">{project.progress}%</span>
-                                </div>
-                                <div className="h-1.5 w-full bg-[#262626] rounded-full overflow-hidden">
-                                   <div className="h-full bg-[#818cf8]" style={{ width: `${project.progress}%` }}></div>
-                                </div>
-                             </div>
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="text-foreground font-medium leading-tight max-w-[85%]">{project.project_name}</h4>
+                              <button className="text-muted-foreground hover:text-foreground">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </button>
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-4">{project.service_type}</p>
 
-                             <div className="flex items-center justify-between text-xs text-[#737373]">
-                               <div className="flex items-center gap-1.5">
-                                 <Calendar className="h-3.5 w-3.5" />
-                                 <span>{project.deadline ? format(new Date(project.deadline), "MMM d") : "No date"}</span>
-                               </div>
-                               
-                               {/* Team Avatars Placeholder */}
-                               <div className="flex -space-x-2">
-                                  {project.assigned_team?.slice(0, 3).map((_, i) => (
-                                     <div key={i} className="h-6 w-6 rounded-full border-2 border-[#0A0A0A] bg-[#262626] flex items-center justify-center overflow-hidden">
-                                        <div className="h-full w-full bg-gradient-to-br from-[#818cf8] to-[#6366f1] opacity-50" />
-                                     </div>
-                                  ))}
-                               </div>
-                             </div>
+                            {/* Progress Bar */}
+                            <div className="mb-4">
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="text-muted-foreground">Progress</span>
+                                <span className="text-muted-foreground">{project.progress}%</span>
+                              </div>
+                              <div className="h-1.5 w-full bg-accent rounded-full overflow-hidden">
+                                <div className="h-full bg-primary" style={{ width: `${project.progress}%` }}></div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1.5">
+                                <Calendar className="h-3.5 w-3.5" />
+                                <span>{project.deadline ? format(new Date(project.deadline), "MMM d") : "No date"}</span>
+                              </div>
+
+                              {/* Team Avatars Placeholder */}
+                              <div className="flex -space-x-2">
+                                {project.assigned_team?.slice(0, 3).map((_, i) => (
+                                  <div key={i} className="h-6 w-6 rounded-full border-2 border-background bg-accent flex items-center justify-center overflow-hidden">
+                                    <div className="h-full w-full bg-gradient-to-br from-[#818cf8] to-[#6366f1] opacity-50" />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
                           </div>
                         )}
                       </Draggable>

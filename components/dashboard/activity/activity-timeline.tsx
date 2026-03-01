@@ -61,20 +61,20 @@ const getActivityConfig = (entityType: string, action: string): { icon: LucideIc
     return { icon: FileText, colorClass: "text-[#0ea5e9]", bgClass: "bg-[#0ea5e9]/10 border-[#0ea5e9]/20" };
   }
 
-  return { icon: Settings, colorClass: "text-[#737373]", bgClass: "bg-[#262626] border-[#404040]" };
+  return { icon: Settings, colorClass: "text-muted-foreground", bgClass: "bg-accent border-muted" };
 };
 
 export function ActivityTimeline({ activities }: { activities: ActivityLog[] }) {
   if (!activities?.length) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-[#737373]">
+      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <p>No recent activity found.</p>
       </div>
     );
   }
 
   return (
-    <div className="relative border-l border-[#262626] ml-4 pb-4 space-y-8">
+    <div className="relative border-l border-border ml-4 pb-4 space-y-8">
       {activities.map((activity) => {
         const { icon: Icon, colorClass, bgClass } = getActivityConfig(activity.entity_type, activity.action);
         const occurredAt = activity.created_at ?? activity.timestamp ?? null;
@@ -86,23 +86,23 @@ export function ActivityTimeline({ activities }: { activities: ActivityLog[] }) 
 
         return (
           <div key={activity.id} className="relative pl-8 sm:pl-10 group">
-            <div className={`absolute -left-4 top-0.5 flex h-8 w-8 items-center justify-center rounded-full border ${bgClass} ring-4 ring-[#0A0A0A] transition-transform group-hover:scale-110`}>
+            <div className={`absolute -left-4 top-0.5 flex h-8 w-8 items-center justify-center rounded-full ${bgClass} ring-4 ring-card transition-transform group-hover:scale-110`}>
               <Icon className={`h-4 w-4 ${colorClass}`} />
             </div>
-            
+
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-               <div className="flex flex-col">
-                  <p className="text-sm font-medium text-[#F5F5F5]">
-                     {description}
-                  </p>
-                  {note && (
-                    <p className="text-sm text-[#A3A3A3] mt-1">&quot;{note}&quot;</p>
-                  )}
-               </div>
-               
-               <time className="text-xs text-[#737373] mt-1 sm:mt-0 whitespace-nowrap">
-                  {timeAgo}
-               </time>
+              <div className="flex flex-col">
+                <p className="text-sm font-medium text-foreground">
+                  {description}
+                </p>
+                {note && (
+                  <p className="text-sm text-muted-foreground mt-1">&quot;{note}&quot;</p>
+                )}
+              </div>
+
+              <time className="text-xs text-muted-foreground mt-1 sm:mt-0 whitespace-nowrap">
+                {timeAgo}
+              </time>
             </div>
           </div>
         );

@@ -138,7 +138,7 @@ export function NotificationsPanel() {
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpen}>
       <DropdownMenuTrigger asChild>
-        <Button size="icon" variant="ghost" className="h-9 w-9 text-[#737373] hover:text-[#F5F5F5] relative">
+        <Button size="icon" variant="ghost" className="h-9 w-9 text-muted-foreground hover:text-foreground relative">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-[#6366f1] text-[10px] leading-4 text-white text-center">
@@ -149,14 +149,14 @@ export function NotificationsPanel() {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-80 bg-[#111111] border-[#262626] text-[#F5F5F5] p-0"
+        className="w-80 bg-card border-border text-foreground p-0"
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#262626]">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h3 className="text-sm font-medium">Notifications</h3>
           {unreadCount > 0 && (
             <button
               onClick={markAllRead}
-              className="flex items-center gap-1 text-xs text-[#818cf8] hover:text-[#6366f1] transition-colors"
+              className="flex items-center gap-1 text-xs text-primary hover:text-[#6366f1] transition-colors"
             >
               <CheckCheck className="h-3 w-3" />
               Mark all read
@@ -167,8 +167,8 @@ export function NotificationsPanel() {
         <ScrollArea className="max-h-80">
           {notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
-              <Bell className="h-8 w-8 text-[#262626]" />
-              <p className="text-xs text-[#737373]">No notifications yet</p>
+              <Bell className="h-8 w-8 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">No notifications yet</p>
             </div>
           ) : (
             <div className="py-1">
@@ -179,18 +179,17 @@ export function NotificationsPanel() {
                   <button
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
-                    className={`w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-[#171717] transition-colors ${
-                      unread ? "bg-[#171717]/50" : ""
-                    }`}
+                    className={`w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-accent transition-colors ${unread ? "bg-accent/50" : ""
+                      }`}
                   >
-                    <div className={`mt-0.5 p-1.5 rounded-md ${unread ? "bg-[#6366f1]/10" : "bg-[#171717]"}`}>
-                      <Icon className={`h-3.5 w-3.5 ${unread ? "text-[#818cf8]" : "text-[#737373]"}`} />
+                    <div className={`mt-0.5 p-1.5 rounded-md ${unread ? "bg-[#6366f1]/10" : "bg-accent"}`}>
+                      <Icon className={`h-3.5 w-3.5 ${unread ? "text-primary" : "text-muted-foreground"}`} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-xs font-medium truncate ${unread ? "text-[#F5F5F5]" : "text-[#A3A3A3]"}`}>
+                      <p className={`text-xs font-medium truncate ${unread ? "text-foreground" : "text-muted-foreground"}`}>
                         {notification.action}
                       </p>
-                      <p className="text-[10px] text-[#404040] mt-1">
+                      <p className="text-[10px] text-muted-foreground mt-1">
                         {formatTimeAgo(notification.created_at)}
                       </p>
                     </div>
@@ -205,13 +204,13 @@ export function NotificationsPanel() {
         </ScrollArea>
 
         {notifications.length > 0 && (
-          <div className="border-t border-[#262626] px-4 py-2">
+          <div className="border-t border-border px-4 py-2">
             <button
               onClick={() => {
                 setIsOpen(false);
                 router.push("/dashboard/activity");
               }}
-              className="text-xs text-[#6366f1] hover:text-[#818cf8] w-full text-center"
+              className="text-xs text-[#6366f1] hover:text-primary w-full text-center"
             >
               View all activity
             </button>
