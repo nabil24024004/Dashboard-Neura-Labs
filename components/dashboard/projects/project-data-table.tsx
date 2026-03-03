@@ -30,6 +30,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useRouter } from "next/navigation";
 
 interface ProjectDataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -40,6 +41,7 @@ export function ProjectDataTable<TData, TValue>({
   columns,
   data,
 }: ProjectDataTableProps<TData, TValue>) {
+  const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -109,9 +111,9 @@ export function ProjectDataTable<TData, TValue>({
           </DropdownMenu>
         </div>
       </div>
-      
-      <div className="rounded-xl border border-border bg-card overflow-x-auto">
-        <Table>
+
+      <div className="rounded-xl border border-border bg-card">
+        <Table className="min-w-[800px]">
           <TableHeader className="bg-accent border-b border-border">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="border-b border-border hover:bg-transparent">
@@ -121,9 +123,9 @@ export function ProjectDataTable<TData, TValue>({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   );
                 })}
@@ -136,7 +138,8 @@ export function ProjectDataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
-                  className="border-b border-border hover:bg-accent/50 data-[state=selected]:bg-accent"
+                  className="border-b border-border hover:bg-accent/50 data-[state=selected]:bg-accent cursor-pointer"
+                  onClick={() => router.push(`/dashboard/projects/${(row.original as any).id}`)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="py-3">
@@ -163,9 +166,9 @@ export function ProjectDataTable<TData, TValue>({
       </div>
 
       <div className="flex items-center justify-end space-x-2 py-4">
-         <div className="flex-1 text-sm text-muted-foreground">
-           Showing {table.getFilteredRowModel().rows.length} projects.
-         </div>
+        <div className="flex-1 text-sm text-muted-foreground">
+          Showing {table.getFilteredRowModel().rows.length} projects.
+        </div>
         <Button
           variant="outline"
           size="sm"

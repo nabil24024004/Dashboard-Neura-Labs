@@ -31,20 +31,31 @@ export function Topbar() {
 
   const refreshTasksCount = useCallback(async () => {
     try {
-      const res = await fetch("/api/tasks", { cache: "no-store" });
-      if (!res.ok) {
-        return;
+      const [tasksRes, wiRes] = await Promise.all([
+        fetch("/api/tasks", { cache: "no-store" }),
+        fetch("/api/work-items?my_items=true", { cache: "no-store" }),
+      ]);
+
+      let taskCount = 0;
+      if (tasksRes.ok) {
+        const payload = await tasksRes.json().catch(() => null);
+        const tasks = Array.isArray(payload?.tasks) ? payload.tasks : [];
+        taskCount = tasks.filter((task: { is_completed?: boolean; status?: string }) => {
+          if (typeof task.is_completed === "boolean") return !task.is_completed;
+          return task.status !== "Done";
+        }).length;
       }
 
-      const payload = await res.json().catch(() => null);
-      const tasks = Array.isArray(payload?.tasks) ? payload.tasks : [];
-      const count = tasks.filter((task: { is_completed?: boolean; status?: string }) => {
-        if (typeof task.is_completed === "boolean") return !task.is_completed;
-        return task.status !== "Done";
-      }).length;
-      setOpenTaskCount(count);
+      let wiCount = 0;
+      if (wiRes.ok) {
+        const wiPayload = await wiRes.json().catch(() => null);
+        const items = Array.isArray(wiPayload?.work_items) ? wiPayload.work_items : [];
+        wiCount = items.filter((wi: { status?: string }) => wi.status !== "done").length;
+      }
+
+      setOpenTaskCount(taskCount + wiCount);
     } catch {
-      // Silent fail: avoid blocking topbar if tasks endpoint is unavailable.
+      // Silent fail: avoid blocking topbar if endpoints are unavailable.
     }
   }, []);
 

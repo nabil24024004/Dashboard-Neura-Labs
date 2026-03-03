@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Project } from "./project-columns";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { CopyPlus, Calendar, MoreHorizontal } from "lucide-react";
@@ -48,13 +49,13 @@ export function ProjectsKanban({ initialProjects }: ProjectsKanbanProps) {
   if (!isMounted) return null; // Avoid hydration mismatch for DND
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-220px)] w-full -mx-4 px-4 sm:mx-0 sm:px-0">
+    <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-280px)] sm:h-[calc(100vh-220px)] w-full snap-x snap-mandatory pr-4">
       <DragDropContext onDragEnd={onDragEnd}>
         {COLUMNS.map((colId) => {
           const columnProjects = projects.filter((p) => p.status === colId);
 
           return (
-            <div key={colId} className="flex-shrink-0 w-[320px] bg-card rounded-xl border border-border flex flex-col max-h-full">
+            <div key={colId} className="flex-shrink-0 w-[280px] sm:w-[320px] bg-card rounded-xl border border-border flex flex-col max-h-full snap-center sm:snap-align-none">
               {/* Column Header */}
               <div className="p-4 border-b border-border flex items-center justify-between sticky top-0 bg-accent rounded-t-xl z-10">
                 <div className="flex items-center gap-2">
@@ -83,12 +84,12 @@ export function ProjectsKanban({ initialProjects }: ProjectsKanbanProps) {
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
                             className={`mb-3 p-4 bg-background border rounded-xl shadow-sm cursor-grab active:cursor-grabbing transition-colors ${snapshot.isDragging
-                                ? "border-[#818cf8] shadow-md shadow-[#818cf8]/10 bg-card"
-                                : "border-border hover:border-muted"
+                              ? "border-[#818cf8] shadow-md shadow-[#818cf8]/10 bg-card"
+                              : "border-border hover:border-muted"
                               }`}
                           >
                             <div className="flex justify-between items-start mb-2">
-                              <h4 className="text-foreground font-medium leading-tight max-w-[85%]">{project.project_name}</h4>
+                              <Link href={`/dashboard/projects/${project.id}`} className="text-foreground font-medium leading-tight max-w-[85%] hover:text-primary transition-colors">{project.project_name}</Link>
                               <button className="text-muted-foreground hover:text-foreground">
                                 <MoreHorizontal className="h-4 w-4" />
                               </button>

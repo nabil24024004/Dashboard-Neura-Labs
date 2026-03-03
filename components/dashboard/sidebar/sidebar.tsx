@@ -13,6 +13,7 @@ import {
   CreditCard,
   PieChart,
   ScrollText,
+  Briefcase,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useSidebar } from "./sidebar-context";
@@ -39,6 +40,7 @@ const navigationGroups: NavGroup[] = [
     items: [
       { name: "Clients", href: "/dashboard/clients", icon: Users },
       { name: "Projects", href: "/dashboard/projects", icon: FolderKanban },
+      { name: "My Work", href: "/dashboard/my-work", icon: Briefcase },
       { name: "Meetings", href: "/dashboard/meetings", icon: Calendar },
     ],
   },
