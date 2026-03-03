@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import { ActivityTimeline, ActivityLog } from "@/components/dashboard/activity/activity-timeline";
 import { AutoRefresh } from "@/components/dashboard/overview/auto-refresh";
 
@@ -30,11 +29,10 @@ interface DashboardTask {
 interface Meeting {
   id: string;
   title: string;
-  date: string;
-  time: string;
+  scheduled_at: string;
   platform: string;
-  meeting_link: string | null;
-  client?: { company: string }[] | { company: string } | null;
+  meeting_url: string | null;
+  client?: { company_name: string }[] | { company_name: string } | null;
 }
 
 interface MyWorkItem {
@@ -56,7 +54,6 @@ export default async function DashboardOverview() {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   const adminDb = createAdminClient();
-  const supabase = await createClient();
 
   // Fetch all overview data in parallel
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -85,7 +82,7 @@ export default async function DashboardOverview() {
     // Pending invoices total
     adminDb
       .from("invoices")
-      .select("total_amount")
+      .select("amount")
       .in("status", ["Pending", "Sent", "Overdue"]),
     // Revenue this month (from payments)
     adminDb
@@ -95,9 +92,10 @@ export default async function DashboardOverview() {
     // Today's meetings
     adminDb
       .from("meetings")
-      .select("id, title, date, time, platform, meeting_link, client:clients(company)")
-      .eq("date", todayStr)
-      .order("time", { ascending: true })
+      .select("id, title, scheduled_at, platform, meeting_url, client:clients(company_name)")
+      .gte("scheduled_at", `${todayStr}T00:00:00`)
+      .lt("scheduled_at", `${todayStr}T23:59:59`)
+      .order("scheduled_at", { ascending: true })
       .limit(5),
     // Recent activity
     adminDb
@@ -107,7 +105,7 @@ export default async function DashboardOverview() {
       .limit(5),
     // Tasks due today
     user?.id
-      ? supabase
+      ? adminDb
         .from("tasks")
         .select("id,title,priority,project_id,deadline,status")
         .neq("status", "Done")
@@ -124,7 +122,7 @@ export default async function DashboardOverview() {
   const activeClients = clientsResult.count ?? 0;
   const runningProjects = projectsResult.count ?? 0;
   const pendingInvoiceTotal = (pendingInvoicesResult.data ?? []).reduce(
-    (sum: number, inv: { total_amount: number | null }) => sum + (inv.total_amount ?? 0), 0
+    (sum: number, inv: { amount: number | null }) => sum + (inv.amount ?? 0), 0
   );
   const revenueThisMonth = (revenueResult.data ?? []).reduce(
     (sum: number, pay: { amount: number | null }) => sum + (pay.amount ?? 0), 0
@@ -268,7 +266,7 @@ export default async function DashboardOverview() {
                     <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <span className="w-2 h-2 rounded-full bg-[#14b8a6]"></span>
-                        {meeting.time || "TBD"}
+                        {meeting.scheduled_at ? format(new Date(meeting.scheduled_at), "h:mm a") : "TBD"}
                       </span>
                       {meeting.platform && (
                         <>
@@ -279,13 +277,13 @@ export default async function DashboardOverview() {
                       {meeting.client && (
                         <>
                           <span>·</span>
-                          <span>{Array.isArray(meeting.client) ? meeting.client[0]?.company : meeting.client.company}</span>
+                          <span>{Array.isArray(meeting.client) ? meeting.client[0]?.company_name : meeting.client.company_name}</span>
                         </>
                       )}
                     </div>
                   </div>
-                  {meeting.meeting_link && (
-                    <a href={meeting.meeting_link} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#6366f1] hover:text-primary px-3 py-1.5 rounded-md bg-[#6366f1]/10">
+                  {meeting.meeting_url && (
+                    <a href={meeting.meeting_url} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-[#6366f1] hover:text-primary px-3 py-1.5 rounded-md bg-[#6366f1]/10">
                       Join
                     </a>
                   )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, useCallback } from "react";
 import { Project, columns } from "./project-columns";
 import { ProjectDataTable } from "./project-data-table";
 import { ProjectsKanban } from "./project-kanban-view";
@@ -18,6 +18,21 @@ export function ProjectViewSwitcher({ initialData }: ProjectViewSwitcherProps) {
   const [showWizard, setShowWizard] = useState(false);
   const [isPending, startTransition] = useTransition();
 
+  // Full refetch from the database to ensure sync
+  const refetch = useCallback(() => {
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/projects", { cache: "no-store" });
+        const data = await res.json();
+        if (res.ok && data.projects) {
+          setProjects(data.projects);
+        }
+      } catch (e) {
+        console.error("Failed to refetch projects:", e);
+      }
+    });
+  }, []);
+
   function handleDelete(id: string) {
     if (!confirm("Delete this project? This cannot be undone.")) return;
     startTransition(async () => {
@@ -26,12 +41,12 @@ export function ProjectViewSwitcher({ initialData }: ProjectViewSwitcherProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
-      if (res.ok) setProjects((prev) => prev.filter((p) => p.id !== id));
+      if (res.ok) refetch();
     });
   }
 
-  function handleProjectCreated(project: Record<string, unknown>) {
-    setProjects((prev) => [project as unknown as Project, ...prev]);
+  function handleProjectCreated() {
+    refetch();
   }
 
   // Columns with live delete wired in

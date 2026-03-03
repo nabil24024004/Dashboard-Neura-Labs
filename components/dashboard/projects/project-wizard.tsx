@@ -93,7 +93,7 @@ function nextKey() {
 interface ProjectWizardProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onProjectCreated: (project: Record<string, unknown>) => void;
+    onProjectCreated: () => void;
 }
 
 export function ProjectWizard({ open, onOpenChange, onProjectCreated }: ProjectWizardProps) {
@@ -394,7 +394,7 @@ export function ProjectWizard({ open, onOpenChange, onProjectCreated }: ProjectW
                 return;
             }
 
-            onProjectCreated(payload.project);
+            onProjectCreated();
             onOpenChange(false);
         });
     }
