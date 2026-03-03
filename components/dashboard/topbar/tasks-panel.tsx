@@ -145,14 +145,13 @@ export function TasksPanel({
         body: JSON.stringify({ title: newTaskTitle.trim(), priority: "Medium" }),
       });
       if (res.ok) {
-        const data = await res.json();
-        setTasks((prev) => [data.task, ...prev]);
         setNewTaskTitle("");
         setShowAddTask(false);
+        await fetchAll();
         onTasksChanged?.();
       }
     });
-  }, [newTaskTitle, onTasksChanged]);
+  }, [newTaskTitle, onTasksChanged, fetchAll]);
 
   const deleteTask = useCallback(
     (id: string) => {
@@ -163,12 +162,12 @@ export function TasksPanel({
           body: JSON.stringify({ id }),
         });
         if (res.ok) {
-          setTasks((prev) => prev.filter((t) => t.id !== id));
+          await fetchAll();
           onTasksChanged?.();
         }
       });
     },
-    [onTasksChanged]
+    [onTasksChanged, fetchAll]
   );
 
   const completeTask = useCallback(
@@ -180,12 +179,12 @@ export function TasksPanel({
           body: JSON.stringify({ id, status: "Done" }),
         });
         if (res.ok) {
-          setTasks((prev) => prev.filter((t) => t.id !== id));
+          await fetchAll();
           onTasksChanged?.();
         }
       });
     },
-    [onTasksChanged]
+    [onTasksChanged, fetchAll]
   );
 
   // Work item status change
@@ -198,19 +197,12 @@ export function TasksPanel({
           body: JSON.stringify({ work_item_id: workItemId, status: newStatus }),
         });
         if (res.ok) {
-          const data = await res.json();
-          setWorkItems((prev) =>
-            prev.map((wi) =>
-              wi.work_item_id === workItemId
-                ? { ...wi, status: data.work_item.status }
-                : wi
-            )
-          );
+          await fetchAll();
           onTasksChanged?.();
         }
       });
     },
-    [onTasksChanged]
+    [onTasksChanged, fetchAll]
   );
 
   // Categorize tasks
@@ -268,8 +260,8 @@ export function TasksPanel({
             <button
               onClick={() => setSection("work-items")}
               className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${section === "work-items"
-                  ? "bg-accent text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                ? "bg-accent text-foreground"
+                : "text-muted-foreground hover:text-foreground"
                 }`}
             >
               <Briefcase className="h-3.5 w-3.5" />
@@ -283,8 +275,8 @@ export function TasksPanel({
             <button
               onClick={() => setSection("tasks")}
               className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${section === "tasks"
-                  ? "bg-accent text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                ? "bg-accent text-foreground"
+                : "text-muted-foreground hover:text-foreground"
                 }`}
             >
               <ListTodo className="h-3.5 w-3.5" />

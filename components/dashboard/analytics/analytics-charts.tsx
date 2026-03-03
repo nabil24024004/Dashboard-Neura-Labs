@@ -24,6 +24,7 @@ import {
   ReceiptText,
   ShieldAlert,
   Sparkles,
+  Users,
 } from "lucide-react";
 import {
   Card,
@@ -93,6 +94,15 @@ interface InsightItem {
   tone: "positive" | "warning" | "critical";
 }
 
+interface TeamMemberWorkload {
+  name: string;
+  total: number;
+  not_started: number;
+  in_progress: number;
+  in_review: number;
+  done: number;
+}
+
 interface AnalyticsChartsProps {
   hasData: boolean;
   metrics: AnalyticsMetric[];
@@ -103,6 +113,7 @@ interface AnalyticsChartsProps {
   invoiceAging: InvoiceAgingPoint[];
   upcomingDeadlines: DeadlineItem[];
   insights: InsightItem[];
+  teamWorkload?: TeamMemberWorkload[];
 }
 
 const moneyFormatter = new Intl.NumberFormat("en-US", {
@@ -204,6 +215,7 @@ export function AnalyticsCharts({
   invoiceAging,
   upcomingDeadlines,
   insights,
+  teamWorkload,
 }: AnalyticsChartsProps) {
   const totalTaskCount = taskStages.reduce((sum, stage) => sum + stage.total, 0);
 
@@ -546,6 +558,56 @@ export function AnalyticsCharts({
           </CardContent>
         </Card>
       </section>
+
+      {/* Phase 6.10: Team Workload */}
+      {teamWorkload && teamWorkload.length > 0 && (
+        <section>
+          <Card className="bg-card border-border text-foreground">
+            <CardHeader className="px-5 pt-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base">Team Workload</CardTitle>
+                  <CardDescription className="text-muted-foreground">Work items per member, grouped by status</CardDescription>
+                </div>
+                <Users className="h-4 w-4 text-[#38bdf8]" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-5 pb-5 space-y-4">
+              {teamWorkload.map((member) => {
+                const max = Math.max(...teamWorkload.map(m => m.total), 1);
+                return (
+                  <div key={member.name} className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2 text-sm">
+                      <span className="text-foreground font-medium truncate">{member.name}</span>
+                      <span className="text-muted-foreground text-xs">{member.total} items</span>
+                    </div>
+                    <div className="h-3 rounded-full bg-muted overflow-hidden flex" style={{ width: `${Math.max(20, (member.total / max) * 100)}%` }}>
+                      {member.done > 0 && (
+                        <div className="h-full bg-[#10b981]" style={{ width: `${(member.done / member.total) * 100}%` }} title={`Done: ${member.done}`} />
+                      )}
+                      {member.in_review > 0 && (
+                        <div className="h-full bg-[#a855f7]" style={{ width: `${(member.in_review / member.total) * 100}%` }} title={`In Review: ${member.in_review}`} />
+                      )}
+                      {member.in_progress > 0 && (
+                        <div className="h-full bg-[#3b82f6]" style={{ width: `${(member.in_progress / member.total) * 100}%` }} title={`In Progress: ${member.in_progress}`} />
+                      )}
+                      {member.not_started > 0 && (
+                        <div className="h-full bg-[#737373]" style={{ width: `${(member.not_started / member.total) * 100}%` }} title={`Not Started: ${member.not_started}`} />
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
+                      {member.done > 0 && <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[#10b981]" />{member.done} done</span>}
+                      {member.in_review > 0 && <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[#a855f7]" />{member.in_review} review</span>}
+                      {member.in_progress > 0 && <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[#3b82f6]" />{member.in_progress} active</span>}
+                      {member.not_started > 0 && <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded-full bg-[#737373]" />{member.not_started} pending</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </section>
+      )}
     </div>
   );
 }

@@ -22,9 +22,11 @@ import { useSidebar } from "./sidebar-context";
 import {
   Sheet,
   SheetContent,
+  SheetTitle,
 } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/dashboard/topbar/theme-toggle";
 import { NotificationsPanel } from "@/components/dashboard/topbar/notifications-panel";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 type NavItem = {
   name: string;
@@ -176,6 +178,9 @@ export function MobileSidebar() {
         showCloseButton={false}
         className="w-[260px] p-0 bg-background border-border flex flex-col"
       >
+        <VisuallyHidden>
+          <SheetTitle>Navigation Menu</SheetTitle>
+        </VisuallyHidden>
         <SidebarContent onNavigate={() => setMobileOpen(false)} />
       </SheetContent>
     </Sheet>

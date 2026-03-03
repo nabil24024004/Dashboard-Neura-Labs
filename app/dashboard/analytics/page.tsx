@@ -96,6 +96,15 @@ interface InsightItem {
   tone: "positive" | "warning" | "critical";
 }
 
+interface TeamMemberWorkload {
+  name: string;
+  total: number;
+  not_started: number;
+  in_progress: number;
+  in_review: number;
+  done: number;
+}
+
 const moneyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -163,7 +172,7 @@ export default async function AnalyticsPage() {
   const nextWeek = new Date(today);
   nextWeek.setDate(nextWeek.getDate() + 7);
 
-  const [paymentsResult, projectsResult, invoicesResult, clientsResult, tasksResult] = await Promise.all([
+  const [paymentsResult, projectsResult, invoicesResult, clientsResult, tasksResult, wiAssignResult] = await Promise.all([
     db.from("payments").select("amount, payment_date, created_at").order("created_at", { ascending: true }),
     db
       .from("projects")
@@ -171,6 +180,8 @@ export default async function AnalyticsPage() {
     db.from("invoices").select("id, amount, status, due_date, issue_date, created_at"),
     db.from("clients").select("created_at").is("deleted_at", null),
     db.from("tasks").select("id, title, status, priority, deadline, created_at"),
+    db.from("work_item_assignments")
+      .select("member_id, role_on_item, work_items:work_item_id(status), users:member_id(first_name, last_name)")
   ]);
 
   const payments = (paymentsResult.data ?? []) as PaymentRow[];
@@ -178,6 +189,33 @@ export default async function AnalyticsPage() {
   const invoices = (invoicesResult.data ?? []) as InvoiceRow[];
   const clients = (clientsResult.data ?? []) as ClientRow[];
   const tasks = (tasksResult.data ?? []) as TaskRow[];
+
+  // Phase 6.10: Team workload from work_item_assignments
+  const wiAssignments = ((wiAssignResult.data ?? []) as unknown as {
+    member_id: string;
+    role_on_item: string;
+    work_items: { status: string } | { status: string }[] | null;
+    users: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null;
+  }[]);
+
+  const memberMap = new Map<string, TeamMemberWorkload>();
+  for (const a of wiAssignments) {
+    const user = Array.isArray(a.users) ? a.users[0] : a.users;
+    const wi = Array.isArray(a.work_items) ? a.work_items[0] : a.work_items;
+    const name = user ? `${user.first_name} ${user.last_name}` : a.member_id.slice(0, 8);
+    const status = wi?.status || "not_started";
+    if (!memberMap.has(a.member_id)) {
+      memberMap.set(a.member_id, { name, total: 0, not_started: 0, in_progress: 0, in_review: 0, done: 0 });
+    }
+    const member = memberMap.get(a.member_id)!;
+    member.total += 1;
+    if (status === "not_started") member.not_started += 1;
+    else if (status === "in_progress") member.in_progress += 1;
+    else if (status === "in_review") member.in_review += 1;
+    else if (status === "done") member.done += 1;
+  }
+
+  const teamWorkload: TeamMemberWorkload[] = Array.from(memberMap.values()).sort((a, b) => b.total - a.total);
 
   const totalCollected = payments.reduce((sum, p) => sum + (p.amount ?? 0), 0);
   const totalInvoiced = invoices.reduce((sum, invoice) => sum + (invoice.amount ?? 0), 0);
@@ -421,8 +459,8 @@ export default async function AnalyticsPage() {
     activeProjects === 0
       ? 0
       : projects
-          .filter((project) => project.status !== "Completed")
-          .reduce((sum, project) => sum + Math.max(0, Math.min(100, project.progress ?? 0)), 0) / activeProjects;
+        .filter((project) => project.status !== "Completed")
+        .reduce((sum, project) => sum + Math.max(0, Math.min(100, project.progress ?? 0)), 0) / activeProjects;
 
   const metrics: AnalyticsMetric[] = [
     {
@@ -503,6 +541,7 @@ export default async function AnalyticsPage() {
         invoiceAging={invoiceAging}
         upcomingDeadlines={upcomingDeadlines}
         insights={insights}
+        teamWorkload={teamWorkload}
       />
     </>
   );

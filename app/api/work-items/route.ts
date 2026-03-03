@@ -154,6 +154,17 @@ export async function POST(req: Request) {
 
         if (assignError) {
             console.error("Failed to create assignments:", assignError.message);
+        } else {
+            // Phase 6.9: Log assignment notifications for each assignee
+            for (const a of assignPayloads) {
+                await logActivity({
+                    userId,
+                    action: `Assigned ${a.role_on_item}`,
+                    entityType: "work_item",
+                    entityId: item.id,
+                    details: { target_name: item.title, assigned_member: a.member_id },
+                });
+            }
         }
     }
 

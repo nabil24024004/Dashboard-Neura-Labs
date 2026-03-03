@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Bell, FileText, FolderKanban, Users, CreditCard, Calendar, FileBadge, CheckCheck, ClipboardList, Plug } from "lucide-react";
+import { Bell, FileText, FolderKanban, Users, CreditCard, Calendar, FileBadge, CheckCheck, ClipboardList, Plug, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -30,6 +30,7 @@ const entityRoutes: Record<string, string> = {
   task: "/dashboard",
   contract: "/dashboard/contracts",
   integration: "/dashboard/integrations",
+  work_item: "/dashboard/my-work",
 };
 
 const entityIcons: Record<string, typeof Bell> = {
@@ -43,6 +44,7 @@ const entityIcons: Record<string, typeof Bell> = {
   task: ClipboardList,
   contract: FileBadge,
   integration: Plug,
+  work_item: Briefcase,
 };
 
 function formatTimeAgo(dateStr: string): string {

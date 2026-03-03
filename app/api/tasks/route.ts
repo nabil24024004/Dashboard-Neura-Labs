@@ -79,7 +79,7 @@ export async function POST(req: Request) {
   const { data, error } = await supabase
     .from("tasks")
     .insert(insertPayload)
-    .select("id,title")
+    .select(TASK_COLUMNS)
     .single();
 
   if (error) {
@@ -98,8 +98,7 @@ export async function POST(req: Request) {
     details: { target_name: data.title },
   });
 
-  // Return success — the client will refetch the full task list
-  return NextResponse.json({ success: true }, { status: 201 });
+  return NextResponse.json({ task: data }, { status: 201 });
 }
 
 export async function PATCH(req: Request) {
