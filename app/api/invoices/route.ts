@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { queryDocs, getDoc, insertDoc, updateDoc, deleteDoc, countDocs, serializeDoc } from "@/lib/firebase/db";
 import { logActivity } from "@/lib/activity-log";
-
-const INVOICE_COLUMNS =
-  "id,client_id,project_id,invoice_number,amount,currency,issue_date,due_date,status,notes,tax_percent,created_at,clients(company_name)";
 
 function normalizeText(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -25,18 +22,23 @@ function normalizeNumber(value: unknown): number | null {
 
 function normalizeStatus(value: unknown): "Draft" | "Pending" | "Paid" | "Overdue" | "Partial" {
   const valid = ["Draft", "Pending", "Paid", "Overdue", "Partial"];
-  if (typeof value === "string" && valid.includes(value)) {
+  if (typeof value === "string" && valid.includes(value))
     return value as "Draft" | "Pending" | "Paid" | "Overdue" | "Partial";
-  }
   return "Draft";
 }
 
-async function generateInvoiceNumber(supabase: ReturnType<typeof createAdminClient>): Promise<string> {
+async function enrichInvoice(doc: Record<string, unknown>) {
+  if (doc.client_id && !doc.client_name) {
+    const client = await getDoc("clients", doc.client_id as string);
+    if (client) doc.client_name = client.company_name;
+  }
+  return { ...doc, clients: doc.client_name ? { company_name: doc.client_name } : null };
+}
+
+async function generateInvoiceNumber(): Promise<string> {
   const year = new Date().getFullYear();
-  const { count } = await supabase
-    .from("invoices")
-    .select("id", { count: "exact", head: true });
-  const num = String((count ?? 0) + 1).padStart(4, "0");
+  const count = await countDocs("invoices");
+  const num = String(count + 1).padStart(4, "0");
   return `INV-${year}-${num}`;
 }
 
@@ -44,18 +46,14 @@ export async function GET() {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("invoices")
-    .select(INVOICE_COLUMNS)
-    .order("issue_date", { ascending: false });
-
-  if (error) {
-    console.error("Failed to fetch invoices:", error.message);
+  try {
+    const data = await queryDocs("invoices", [], [{ field: "created_at", direction: "desc" }]);
+    const enriched = await Promise.all(data.map((d) => enrichInvoice(serializeDoc(d))));
+    return NextResponse.json({ invoices: enriched });
+  } catch (error) {
+    console.error("Failed to fetch invoices:", error);
     return NextResponse.json({ error: "Failed to fetch invoices" }, { status: 500 });
   }
-
-  return NextResponse.json({ invoices: data ?? [] });
 }
 
 export async function POST(req: Request) {
@@ -76,12 +74,16 @@ export async function POST(req: Request) {
   const due_date = normalizeDate(body?.due_date);
   if (!due_date) return NextResponse.json({ error: "Due date is required" }, { status: 400 });
 
-  const supabase = createAdminClient();
-  const invoice_number =
-    normalizeText(body?.invoice_number) ?? (await generateInvoiceNumber(supabase));
+  // Denormalize client name
+  let client_name: string | null = null;
+  const client = await getDoc("clients", client_id);
+  if (client) client_name = client.company_name as string;
+
+  const invoice_number = normalizeText(body?.invoice_number) ?? (await generateInvoiceNumber());
 
   const payload: Record<string, unknown> = {
     client_id,
+    client_name,
     invoice_number,
     amount,
     issue_date,
@@ -97,26 +99,23 @@ export async function POST(req: Request) {
   const tax_percent = normalizeNumber(body?.tax_percent);
   if (tax_percent !== null) payload.tax_percent = tax_percent;
 
-  const { data, error } = await supabase
-    .from("invoices")
-    .insert(payload)
-    .select(INVOICE_COLUMNS)
-    .single();
+  try {
+    const data = await insertDoc("invoices", payload);
 
-  if (error) {
-    console.error("Failed to create invoice:", error.message);
-    return NextResponse.json({ error: `Failed to create invoice: ${error.message}` }, { status: 500 });
+    await logActivity({
+      userId,
+      action: "Created",
+      entityType: "invoice",
+      entityId: data.id,
+      details: { target_name: data.invoice_number as string, amount: data.amount },
+    });
+
+    const enriched = await enrichInvoice(serializeDoc(data));
+    return NextResponse.json({ invoice: enriched }, { status: 201 });
+  } catch (error) {
+    console.error("Failed to create invoice:", error);
+    return NextResponse.json({ error: "Failed to create invoice" }, { status: 500 });
   }
-
-  await logActivity({
-    userId,
-    action: "Created",
-    entityType: "invoice",
-    entityId: data.id,
-    details: { target_name: data.invoice_number, amount: data.amount },
-  });
-
-  return NextResponse.json({ invoice: data }, { status: 201 });
 }
 
 export async function PATCH(req: Request) {
@@ -136,28 +135,24 @@ export async function PATCH(req: Request) {
   if (!Object.keys(updates).length)
     return NextResponse.json({ error: "No fields provided" }, { status: 400 });
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("invoices")
-    .update(updates)
-    .eq("id", id)
-    .select(INVOICE_COLUMNS)
-    .single();
+  try {
+    const data = await updateDoc("invoices", id, updates);
+    if (!data) return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
 
-  if (error) {
-    console.error("Failed to update invoice:", error.message);
+    await logActivity({
+      userId,
+      action: "Updated",
+      entityType: "invoice",
+      entityId: data.id,
+      details: { target_name: data.invoice_number as string, status: data.status as string },
+    });
+
+    const enriched = await enrichInvoice(serializeDoc(data));
+    return NextResponse.json({ invoice: enriched });
+  } catch (error) {
+    console.error("Failed to update invoice:", error);
     return NextResponse.json({ error: "Failed to update invoice" }, { status: 500 });
   }
-
-  await logActivity({
-    userId,
-    action: "Updated",
-    entityType: "invoice",
-    entityId: data.id,
-    details: { target_name: data.invoice_number, status: data.status },
-  });
-
-  return NextResponse.json({ invoice: data });
 }
 
 export async function DELETE(req: Request) {
@@ -168,26 +163,23 @@ export async function DELETE(req: Request) {
   const id = normalizeText(body?.id);
   if (!id) return NextResponse.json({ error: "Invoice id required" }, { status: 400 });
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("invoices")
-    .delete()
-    .eq("id", id)
-    .select("id,invoice_number")
-    .single();
+  try {
+    const invoice = await getDoc("invoices", id);
+    if (!invoice) return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
 
-  if (error) {
-    console.error("Failed to delete invoice:", error.message);
+    await deleteDoc("invoices", id);
+
+    await logActivity({
+      userId,
+      action: "Deleted",
+      entityType: "invoice",
+      entityId: id,
+      details: { target_name: invoice.invoice_number as string },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete invoice:", error);
     return NextResponse.json({ error: "Failed to delete invoice" }, { status: 500 });
   }
-
-  await logActivity({
-    userId,
-    action: "Deleted",
-    entityType: "invoice",
-    entityId: data.id,
-    details: { target_name: data.invoice_number },
-  });
-
-  return NextResponse.json({ success: true });
 }

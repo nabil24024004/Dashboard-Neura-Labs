@@ -132,7 +132,11 @@ export function TasksPanel({
   }, []);
 
   useEffect(() => {
-    if (open) void fetchAll();
+    if (!open) return;
+    const timeout = window.setTimeout(() => {
+      void fetchAll();
+    }, 0);
+    return () => window.clearTimeout(timeout);
   }, [open, fetchAll]);
 
   // Task actions

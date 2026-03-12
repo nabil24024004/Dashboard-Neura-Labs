@@ -26,7 +26,7 @@ export type Meeting = {
   platform: string | null;
   agenda: string | null;
   created_at: string;
-  // Joined fields from Supabase FK embed
+  // Joined fields from Firestore enrichment
   clients?: { company_name: string } | null;
   projects?: { project_name: string } | null;
 };
@@ -67,13 +67,13 @@ export const columns: ColumnDef<Meeting>[] = [
       );
     },
     cell: ({ row }) => {
-       const date = new Date(row.getValue("scheduled_at"));
-       return (
-          <div className="flex flex-col">
-             <span className="text-foreground">{format(date, "MMM d, yyyy")}</span>
-             <span className="text-xs text-muted-foreground">{format(date, "h:mm a")}</span>
-          </div>
-       );
+      const date = new Date(row.getValue("scheduled_at"));
+      return (
+        <div className="flex flex-col">
+          <span className="text-foreground">{format(date, "MMM d, yyyy")}</span>
+          <span className="text-xs text-muted-foreground">{format(date, "h:mm a")}</span>
+        </div>
+      );
     },
   },
   {
@@ -106,29 +106,29 @@ export const columns: ColumnDef<Meeting>[] = [
     accessorKey: "platform",
     header: "Platform",
     cell: ({ row }) => {
-       const platform = row.getValue("platform") as string;
-       if (!platform) return <div className="text-muted-foreground">—</div>;
-       return (
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-             <Video className="h-4 w-4" />
-             {platform}
-          </div>
-       );
+      const platform = row.getValue("platform") as string;
+      if (!platform) return <div className="text-muted-foreground">—</div>;
+      return (
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Video className="h-4 w-4" />
+          {platform}
+        </div>
+      );
     },
   },
   {
     accessorKey: "meeting_url",
     header: "Link",
     cell: ({ row }) => {
-       const url = row.getValue("meeting_url") as string;
-       if (!url) return <div className="text-muted-foreground">—</div>;
-       return (
-          <Button variant="ghost" size="sm" asChild className="h-8 text-[#6366f1] hover:text-primary hover:bg-[#6366f1]/10">
-             <a href={url} target="_blank" rel="noreferrer">
-                <LinkIcon className="h-4 w-4 mr-1.5" /> Join
-             </a>
-          </Button>
-       );
+      const url = row.getValue("meeting_url") as string;
+      if (!url) return <div className="text-muted-foreground">—</div>;
+      return (
+        <Button variant="ghost" size="sm" asChild className="h-8 text-[#6366f1] hover:text-primary hover:bg-[#6366f1]/10">
+          <a href={url} target="_blank" rel="noreferrer">
+            <LinkIcon className="h-4 w-4 mr-1.5" /> Join
+          </a>
+        </Button>
+      );
     },
   },
   {

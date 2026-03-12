@@ -13,7 +13,9 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import Link from "next/link";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { queryDocs, getDoc, serializeDoc } from "@/lib/firebase/db";
+import { getMyWorkItems } from "@/lib/firebase/queries";
+import { buildFinanceDashboardMetrics, type InvoiceSnapshot, type PaymentSnapshot } from "@/lib/invoices/metrics";
 import { ActivityTimeline, ActivityLog } from "@/components/dashboard/activity/activity-timeline";
 import { AutoRefresh } from "@/components/dashboard/overview/auto-refresh";
 
@@ -32,7 +34,7 @@ interface Meeting {
   scheduled_at: string;
   platform: string;
   meeting_url: string | null;
-  client?: { company_name: string }[] | { company_name: string } | null;
+  client?: { company_name: string } | null;
 }
 
 interface MyWorkItem {
@@ -46,6 +48,8 @@ interface MyWorkItem {
   due_date: string | null;
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardOverview() {
   const user = await currentUser();
   const today = format(new Date(), "EEE, MMM d yyyy");
@@ -53,84 +57,90 @@ export default async function DashboardOverview() {
   const hour = now.getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
-  const adminDb = createAdminClient();
-
   // Fetch all overview data in parallel
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const todayStr = format(now, "yyyy-MM-dd");
 
   const [
-    clientsResult,
-    projectsResult,
-    pendingInvoicesResult,
-    revenueResult,
-    meetingsResult,
+    allClients,
+    allProjects,
+    allInvoices,
+    thisMonthPayments,
+    todayMeetings,
     activitiesResult,
-    tasksResult,
+    dueTodayTasks,
     myWorkResult,
   ] = await Promise.all([
     // Active clients count
-    adminDb
-      .from("clients")
-      .select("id", { count: "exact", head: true })
-      .is("deleted_at", null),
+    queryDocs("clients", [{ field: "deleted_at", op: "==", value: null }]),
     // Running projects count
-    adminDb
-      .from("projects")
-      .select("id", { count: "exact", head: true })
-      .neq("status", "Completed"),
-    // Pending invoices total
-    adminDb
-      .from("invoices")
-      .select("amount")
-      .in("status", ["Pending", "Sent", "Overdue"]),
+    queryDocs("projects", [{ field: "status", op: "!=", value: "Completed" }]),
+    // Invoice summary
+    queryDocs("invoices"),
     // Revenue this month (from payments)
-    adminDb
-      .from("payments")
-      .select("amount")
-      .gte("created_at", startOfMonth),
+    queryDocs("payments", [{ field: "created_at", op: ">=", value: startOfMonth }]),
     // Today's meetings
-    adminDb
-      .from("meetings")
-      .select("id, title, scheduled_at, platform, meeting_url, client:clients(company_name)")
-      .gte("scheduled_at", `${todayStr}T00:00:00`)
-      .lt("scheduled_at", `${todayStr}T23:59:59`)
-      .order("scheduled_at", { ascending: true })
-      .limit(5),
+    queryDocs(
+      "meetings",
+      [
+        { field: "scheduled_at", op: ">=", value: `${todayStr}T00:00:00` },
+        { field: "scheduled_at", op: "<", value: `${todayStr}T23:59:59` }
+      ],
+      [{ field: "scheduled_at", direction: "asc" }],
+      5
+    ),
     // Recent activity
-    adminDb
-      .from("activity_logs")
-      .select("id, actor_id, action, entity_type, entity_id, timestamp")
-      .order("timestamp", { ascending: false })
-      .limit(5),
+    queryDocs("activity_logs", [], [{ field: "timestamp", direction: "desc" }], 5),
     // Tasks due today
     user?.id
-      ? adminDb
-        .from("tasks")
-        .select("id,title,priority,project_id,deadline,status")
-        .neq("status", "Done")
-        .eq("deadline", todayStr)
-        .order("deadline", { ascending: true })
-        .limit(6)
-      : Promise.resolve({ data: [], error: null }),
-    // My work items (via RPC)
-    user?.id
-      ? adminDb.rpc("get_my_work_items", { p_user_id: user.id })
-      : Promise.resolve({ data: [], error: null }),
+      ? queryDocs("tasks", [{ field: "assigned_to", op: "==", value: user.id }])
+      : Promise.resolve([]),
+    // My work items
+    user?.id ? getMyWorkItems(user.id) : Promise.resolve([]),
   ]);
 
-  const activeClients = clientsResult.count ?? 0;
-  const runningProjects = projectsResult.count ?? 0;
-  const pendingInvoiceTotal = (pendingInvoicesResult.data ?? []).reduce(
-    (sum: number, inv: { amount: number | null }) => sum + (inv.amount ?? 0), 0
+  const financeMetrics = buildFinanceDashboardMetrics({
+    invoices: allInvoices.map((invoice) => ({
+      id: invoice.id,
+      amount: Number(invoice.amount) || 0,
+      status: invoice.status as InvoiceSnapshot["status"],
+      due_date: (invoice.due_date as string | null) ?? null,
+      issue_date: (invoice.issue_date as string | null) ?? null,
+      created_at: (invoice.created_at as string | null) ?? null,
+    })),
+    payments: thisMonthPayments.map((payment) => ({
+      id: payment.id,
+      amount: Number(payment.amount) || 0,
+      payment_date: (payment.payment_date as string | null) ?? null,
+      created_at: (payment.created_at as string | null) ?? null,
+      invoice_id: (payment.invoice_id as string | null) ?? null,
+    })) as PaymentSnapshot[],
+    now,
+  });
+
+  const activeClients = allClients.length;
+  const runningProjects = allProjects.length;
+  const pendingInvoiceTotal = financeMetrics.invoiceState.openInvoiceAmount;
+  const revenueThisMonth = financeMetrics.cashFlow.collectedCurrentMonth;
+
+  const meetingsEnriched = await Promise.all(
+    todayMeetings.map(async (m) => {
+      const doc = serializeDoc(m);
+      if (m.client_id) {
+        const client = await getDoc("clients", m.client_id as string);
+        if (client) doc.client = { company_name: client.company_name };
+      }
+      return doc as unknown as Meeting;
+    })
   );
-  const revenueThisMonth = (revenueResult.data ?? []).reduce(
-    (sum: number, pay: { amount: number | null }) => sum + (pay.amount ?? 0), 0
-  );
-  const meetings = (meetingsResult.data ?? []) as Meeting[];
-  const activities = (activitiesResult.data ?? []) as ActivityLog[];
-  const dueTodayTasks = (tasksResult.data ?? []) as DashboardTask[];
-  const myWorkItems = (myWorkResult.data ?? []) as MyWorkItem[];
+
+  const activities = activitiesResult.map(serializeDoc) as ActivityLog[];
+  const tasks = dueTodayTasks
+    .map(serializeDoc)
+    .filter((t) => t.status !== "Done" && t.deadline === todayStr)
+    .sort((a, b) => new Date(a.deadline || "").getTime() - new Date(b.deadline || "").getTime())
+    .slice(0, 6) as DashboardTask[];
+  const myWorkItems = myWorkResult.map(serializeDoc) as MyWorkItem[];
 
   // Work item stats
   const wiTotal = myWorkItems.length;
@@ -182,7 +192,6 @@ export default async function DashboardOverview() {
         ))}
       </div>
 
-      {/* Phase 6.6: My Work Summary */}
       {wiTotal > 0 && (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
           <div className="p-4 border-b border-border flex items-center justify-between">
@@ -193,7 +202,6 @@ export default async function DashboardOverview() {
             <Link href="/dashboard/my-work" className="text-xs text-[#6366f1] hover:text-primary">View all</Link>
           </div>
           <div className="p-4 space-y-4">
-            {/* Mini stat row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="rounded-lg bg-background border border-border p-3">
                 <p className="text-xs text-muted-foreground">Total</p>
@@ -213,7 +221,6 @@ export default async function DashboardOverview() {
               </div>
             </div>
 
-            {/* Active work items list */}
             {wiActive.length > 0 && (
               <div className="space-y-2">
                 <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Active Items</h4>
@@ -252,14 +259,14 @@ export default async function DashboardOverview() {
             <Link href="/dashboard/meetings" className="text-xs text-[#6366f1] hover:text-primary">View all</Link>
           </div>
           <div className="p-4 flex-1 overflow-y-auto space-y-3">
-            {meetings.length === 0 ? (
+            {meetingsEnriched.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center gap-2">
                 <Clock className="h-8 w-8 text-[#262626]" />
                 <p className="text-sm text-muted-foreground">No meetings scheduled for today.</p>
                 <Link href="/dashboard/meetings" className="text-xs text-[#6366f1] hover:text-primary">Schedule a meeting</Link>
               </div>
             ) : (
-              meetings.map((meeting) => (
+              meetingsEnriched.map((meeting) => (
                 <div key={meeting.id} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-background hover:border-muted transition-colors">
                   <div className="flex flex-col flex-1">
                     <p className="text-sm font-medium text-foreground">{meeting.title}</p>
@@ -277,7 +284,7 @@ export default async function DashboardOverview() {
                       {meeting.client && (
                         <>
                           <span>·</span>
-                          <span>{Array.isArray(meeting.client) ? meeting.client[0]?.company_name : meeting.client.company_name}</span>
+                          <span>{meeting.client.company_name}</span>
                         </>
                       )}
                     </div>
@@ -298,12 +305,12 @@ export default async function DashboardOverview() {
             <h3 className="font-medium text-foreground">Tasks Due Today</h3>
           </div>
           <div className="p-4 flex-1 overflow-y-auto space-y-3">
-            {dueTodayTasks.length === 0 ? (
+            {tasks.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center gap-2">
                 <p className="text-sm text-muted-foreground">No tasks due today.</p>
               </div>
             ) : (
-              dueTodayTasks.map((task) => (
+              tasks.map((task) => (
                 <div key={task.id} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-background hover:border-muted transition-colors">
                   <div className="mt-0.5 border-2 border-muted rounded-sm w-4 h-4"></div>
                   <div className="flex-1 space-y-1">

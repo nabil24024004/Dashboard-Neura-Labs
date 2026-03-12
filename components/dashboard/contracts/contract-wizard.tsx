@@ -161,7 +161,7 @@ export function ContractWizard() {
         <ContractPdfDocument type={selectedType} data={formValues} />
       ).toBlob();
 
-      // 2. Upload to Supabase Storage via /api/upload
+      // 2. Upload to Cloudflare R2 via /api/upload
       const fd = new FormData();
       fd.append(
         "file",

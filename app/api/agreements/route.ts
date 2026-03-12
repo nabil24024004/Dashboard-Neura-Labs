@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { queryDocs, getDoc, insertDoc, updateDoc, deleteDoc, serializeDoc } from "@/lib/firebase/db";
 import { logActivity } from "@/lib/activity-log";
-
-const AGR_COLUMNS =
-  "id,client_id,type,signed_date,expiry_date,document_link,status,notes,created_at,clients(company_name)";
 
 function toText(v: unknown): string | null {
   if (typeof v !== "string") return null;
@@ -21,18 +18,25 @@ function toStatus(v: unknown): "Active" | "Expired" | "Pending Signature" {
   return "Pending Signature";
 }
 
+async function enrichAgreement(doc: Record<string, unknown>) {
+  if (doc.client_id && !doc.client_name) {
+    const client = await getDoc("clients", doc.client_id as string);
+    if (client) doc.client_name = client.company_name;
+  }
+  return { ...doc, clients: doc.client_name ? { company_name: doc.client_name } : null };
+}
+
 export async function GET() {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("agreements")
-    .select(AGR_COLUMNS)
-    .order("created_at", { ascending: false });
-
-  if (error) return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });
-  return NextResponse.json({ agreements: data ?? [] });
+  try {
+    const data = await queryDocs("agreements", [], [{ field: "created_at", direction: "desc" }]);
+    const enriched = await Promise.all(data.map((d) => enrichAgreement(serializeDoc(d))));
+    return NextResponse.json({ agreements: enriched });
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
@@ -45,34 +49,29 @@ export async function POST(req: Request) {
   if (!client_id) return NextResponse.json({ error: "Client required" }, { status: 400 });
   if (!type) return NextResponse.json({ error: "Agreement type required" }, { status: 400 });
 
-  const supabase = createAdminClient();
-  const payload: Record<string, unknown> = {
-    client_id,
-    type,
-    status: "Pending Signature",
-  };
+  let client_name: string | null = null;
+  const client = await getDoc("clients", client_id);
+  if (client) client_name = client.company_name as string;
+
+  const payload: Record<string, unknown> = { client_id, client_name, type, status: "Pending Signature" };
   const expiry_date = toDate(body?.expiry_date);
   if (expiry_date) payload.expiry_date = expiry_date;
   const notes = toText(body?.notes);
   if (notes) payload.notes = notes;
 
-  const { data, error } = await supabase
-    .from("agreements")
-    .insert(payload)
-    .select(AGR_COLUMNS)
-    .single();
+  try {
+    const data = await insertDoc("agreements", payload);
 
-  if (error) return NextResponse.json({ error: `Failed to create: ${error.message}` }, { status: 500 });
+    await logActivity({
+      userId, action: "Created", entityType: "agreement", entityId: data.id,
+      details: { target_name: data.type as string, status: data.status as string },
+    });
 
-  await logActivity({
-    userId,
-    action: "Created",
-    entityType: "agreement",
-    entityId: data.id,
-    details: { target_name: data.type, status: data.status },
-  });
-
-  return NextResponse.json({ agreement: data }, { status: 201 });
+    const enriched = await enrichAgreement(serializeDoc(data));
+    return NextResponse.json({ agreement: enriched }, { status: 201 });
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to create" }, { status: 500 });
+  }
 }
 
 export async function PATCH(req: Request) {
@@ -93,25 +92,20 @@ export async function PATCH(req: Request) {
   if (!Object.keys(updates).length)
     return NextResponse.json({ error: "No fields" }, { status: 400 });
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("agreements")
-    .update(updates)
-    .eq("id", id)
-    .select(AGR_COLUMNS)
-    .single();
+  try {
+    const data = await updateDoc("agreements", id, updates);
+    if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  if (error) return NextResponse.json({ error: "Failed to update" }, { status: 500 });
+    await logActivity({
+      userId, action: "Updated", entityType: "agreement", entityId: data.id,
+      details: { target_name: data.type as string, status: data.status as string },
+    });
 
-  await logActivity({
-    userId,
-    action: "Updated",
-    entityType: "agreement",
-    entityId: data.id,
-    details: { target_name: data.type, status: data.status },
-  });
-
-  return NextResponse.json({ agreement: data });
+    const enriched = await enrichAgreement(serializeDoc(data));
+    return NextResponse.json({ agreement: enriched });
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to update" }, { status: 500 });
+  }
 }
 
 export async function DELETE(req: Request) {
@@ -122,22 +116,19 @@ export async function DELETE(req: Request) {
   const id = toText(body?.id);
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("agreements")
-    .delete()
-    .eq("id", id)
-    .select("id,type")
-    .single();
-  if (error) return NextResponse.json({ error: "Failed to delete" }, { status: 500 });
+  try {
+    const agreement = await getDoc("agreements", id);
+    if (!agreement) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  await logActivity({
-    userId,
-    action: "Deleted",
-    entityType: "agreement",
-    entityId: data.id,
-    details: { target_name: data.type },
-  });
+    await deleteDoc("agreements", id);
 
-  return NextResponse.json({ success: true });
+    await logActivity({
+      userId, action: "Deleted", entityType: "agreement", entityId: id,
+      details: { target_name: agreement.type as string },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to delete" }, { status: 500 });
+  }
 }

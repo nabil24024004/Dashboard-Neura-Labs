@@ -103,7 +103,7 @@ export const columns: ColumnDef<Invoice>[] = [
     header: "Due Date",
     cell: ({ row }) => {
        const date = new Date(row.getValue("due_date"));
-       const isOverdue = date < new Date() && row.original.status !== "Paid";
+       const isOverdue = row.original.status === "Overdue";
        return (
           <div className={`text-sm ${isOverdue ? "text-[#ef4444] font-medium" : "text-muted-foreground"}`}>
              {format(date, "MMM d, yyyy")}

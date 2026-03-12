@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Project } from "./project-columns";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
@@ -17,11 +17,11 @@ interface ProjectsKanbanProps {
 export function ProjectsKanban({ initialProjects }: ProjectsKanbanProps) {
   // We need to locally manage state so optimistic UI drag and drop feels responsive
   const [projects, setProjects] = useState<Project[]>(initialProjects);
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   const onDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
@@ -41,7 +41,7 @@ export function ProjectsKanban({ initialProjects }: ProjectsKanbanProps) {
 
     setProjects(updatedProjects);
 
-    // TODO: We could fire off a server action or supabase UPDATE mutation here:
+    // TODO: We could fire off a server action or Firestore updateDoc here:
     // await updateProjectStatus(draggableId, newStatus);
     console.log(`Updated project ${draggableId} to status ${newStatus}`);
   };

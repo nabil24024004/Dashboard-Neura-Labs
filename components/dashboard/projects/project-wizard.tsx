@@ -127,17 +127,24 @@ export function ProjectWizard({ open, onOpenChange, onProjectCreated }: ProjectW
             .catch(() => { });
     }, [open]);
 
-    // Reset on close
-    useEffect(() => {
-        if (!open) {
-            setStep(1);
-            setForm(EMPTY_FORM);
-            setWorkItems([]);
-            setError(null);
-            setImportErrors([]);
-            setShowAddCategory(false);
-        }
-    }, [open]);
+    const resetWizard = useCallback(() => {
+        setStep(1);
+        setForm(EMPTY_FORM);
+        setWorkItems([]);
+        setError(null);
+        setImportErrors([]);
+        setShowAddCategory(false);
+    }, []);
+
+    const handleOpenChange = useCallback(
+        (nextOpen: boolean) => {
+            if (!nextOpen) {
+                resetWizard();
+            }
+            onOpenChange(nextOpen);
+        },
+        [onOpenChange, resetWizard]
+    );
 
     /* ---- Step 2: work item manipulation ---- */
 
@@ -395,7 +402,7 @@ export function ProjectWizard({ open, onOpenChange, onProjectCreated }: ProjectW
             }
 
             onProjectCreated();
-            onOpenChange(false);
+            handleOpenChange(false);
         });
     }
 
@@ -410,10 +417,11 @@ export function ProjectWizard({ open, onOpenChange, onProjectCreated }: ProjectW
     const uncategorized = workItems.filter((w) => !categories.includes(w.category));
     if (uncategorized.length > 0) {
         itemsByCategory["General"] = [...(itemsByCategory["General"] || []), ...uncategorized];
-        if (!categories.includes("General")) {
-            setCategories((prev) => [...prev, "General"]);
-        }
     }
+    const displayCategories =
+        uncategorized.length > 0 && !categories.includes("General")
+            ? [...categories, "General"]
+            : categories;
 
     const totalItems = workItems.length;
     const totalHours = workItems.reduce((sum, w) => sum + (w.estimated_hours || 0), 0);
@@ -422,7 +430,7 @@ export function ProjectWizard({ open, onOpenChange, onProjectCreated }: ProjectW
     /* ---- Render ---- */
 
     return (
-        <Sheet open={open} onOpenChange={onOpenChange}>
+        <Sheet open={open} onOpenChange={handleOpenChange}>
             <SheetContent
                 showCloseButton={false}
                 className="w-[860px] max-w-[92vw] bg-background border-l border-border text-foreground p-0 flex flex-col overflow-hidden"
@@ -697,7 +705,7 @@ export function ProjectWizard({ open, onOpenChange, onProjectCreated }: ProjectW
                             )}
 
                             {/* Work items by category */}
-                            {categories.map((cat) => {
+                            {displayCategories.map((cat) => {
                                 const items = itemsByCategory[cat] || [];
                                 const isCollapsed = collapsedCategories.has(cat);
 
@@ -790,7 +798,7 @@ export function ProjectWizard({ open, onOpenChange, onProjectCreated }: ProjectW
                             {/* Work Breakdown Summary */}
                             <div className="rounded-lg border border-border bg-card p-4 space-y-3">
                                 <h4 className="text-sm font-medium">Work Breakdown</h4>
-                                {categories.map((cat) => {
+                                {displayCategories.map((cat) => {
                                     const items = itemsByCategory[cat] || [];
                                     if (items.length === 0) return null;
                                     return (
@@ -849,7 +857,7 @@ export function ProjectWizard({ open, onOpenChange, onProjectCreated }: ProjectW
                         <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => onOpenChange(false)}
+                            onClick={() => handleOpenChange(false)}
                             disabled={isPending}
                             className="text-muted-foreground"
                         >

@@ -88,6 +88,14 @@ interface PaymentsDataTableProps {
   avgDaysToPay: number;
 }
 
+interface InvoiceApiRecord {
+  id: string;
+  invoice_number: string;
+  clients?: {
+    company_name?: string;
+  } | null;
+}
+
 export function PaymentsDataTable({
   columns, data: initialData,
   totalReceived30d, outstandingBalance, avgDaysToPay,
@@ -107,7 +115,7 @@ export function PaymentsDataTable({
     fetch("/api/invoices")
       .then((r) => r.json())
       .then((p) => {
-        const opts: InvoiceOption[] = (p?.invoices ?? []).map((inv: any) => ({
+        const opts: InvoiceOption[] = ((p?.invoices ?? []) as InvoiceApiRecord[]).map((inv) => ({
           id: inv.id,
           invoice_number: inv.invoice_number,
           client_name: inv.clients?.company_name ?? "Unknown",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { RowData } from "@tanstack/react-table";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -23,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Search, SlidersHorizontal, ArrowUpRight } from "lucide-react";
+import { Search, SlidersHorizontal } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -32,12 +33,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
 
-interface ProjectDataTableProps<TData, TValue> {
+interface ProjectDataTableProps<TData extends RowData & { id: string }, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
 }
 
-export function ProjectDataTable<TData, TValue>({
+export function ProjectDataTable<TData extends RowData & { id: string }, TValue>({
   columns,
   data,
 }: ProjectDataTableProps<TData, TValue>) {
@@ -139,7 +140,7 @@ export function ProjectDataTable<TData, TValue>({
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
                   className="border-b border-border hover:bg-accent/50 data-[state=selected]:bg-accent cursor-pointer"
-                  onClick={() => router.push(`/dashboard/projects/${(row.original as any).id}`)}
+                  onClick={() => router.push(`/dashboard/projects/${row.original.id}`)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} className="py-3">

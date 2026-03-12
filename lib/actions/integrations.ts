@@ -1,32 +1,27 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { queryDocs, updateDoc, insertDoc, serializeDoc } from "@/lib/firebase/db";
 import { revalidatePath } from "next/cache";
 
 export async function getIntegrations() {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("integrations")
-    .select("*");
-
-  if (error) {
+  try {
+    const data = await queryDocs("integrations");
+    return data.map(serializeDoc);
+  } catch (error) {
     console.error("Error fetching integrations:", error);
     return [];
   }
-
-  return data;
 }
 
 export async function toggleIntegration(id: string, currentStatus: string) {
-  const supabase = await createClient();
   const newStatus = currentStatus === "Connected" ? "Disconnected" : "Connected";
 
-  const { error } = await supabase
-    .from("integrations")
-    .update({ status: newStatus, last_sync: new Date().toISOString() })
-    .eq("id", id);
-
-  if (error) {
+  try {
+    await updateDoc("integrations", id, {
+      status: newStatus,
+      last_sync: new Date().toISOString(),
+    });
+  } catch (error) {
     console.error(`Error toggling integration ${id}:`, error);
     return { success: false, error };
   }
@@ -40,17 +35,13 @@ export async function logIntegrationActivity(
   activityType: string,
   details: Record<string, unknown>
 ) {
-  const supabase = await createClient();
-  
-  const { error } = await supabase
-    .from("integration_logs")
-    .insert({
+  try {
+    await insertDoc("integration_logs", {
       integration_id: integrationId,
       activity_type: activityType,
       details: details,
     });
-
-  if (error) {
+  } catch (error) {
     console.error("Error logging integration activity:", error);
     return { success: false, error };
   }

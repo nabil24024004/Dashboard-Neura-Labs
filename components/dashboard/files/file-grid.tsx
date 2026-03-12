@@ -103,7 +103,7 @@ export function FileGrid({ files: initialFiles, clients }: FileGridProps) {
     setError(null);
 
     startTransition(async () => {
-      // 1️⃣ Upload to Supabase Storage
+      // 1️⃣ Upload to Cloudflare R2
       const fd = new FormData();
       fd.append("file", pendingFile);
       const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });

@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { queryDocs, insertDoc, updateDoc, getDoc, deleteDoc, serializeDoc } from "@/lib/firebase/db";
 import { logActivity } from "@/lib/activity-log";
-
-const INTEGRATION_COLUMNS = "*";
 
 function normalizeText(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -15,17 +13,13 @@ export async function GET() {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("integrations")
-    .select(INTEGRATION_COLUMNS);
-
-  if (error) {
-    console.error("Failed to fetch integrations:", error.message);
+  try {
+    const data = await queryDocs("integrations");
+    return NextResponse.json({ integrations: data.map(serializeDoc) });
+  } catch (error) {
+    console.error("Failed to fetch integrations:", error);
     return NextResponse.json({ error: "Failed to fetch integrations" }, { status: 500 });
   }
-
-  return NextResponse.json({ integrations: data ?? [] });
 }
 
 export async function POST(req: Request) {
@@ -36,43 +30,32 @@ export async function POST(req: Request) {
   const name = normalizeText(body?.name);
   if (!name) return NextResponse.json({ error: "Integration name is required" }, { status: 400 });
 
-  const description = normalizeText(body?.description) ?? "";
-  const category = normalizeText(body?.category) ?? "General";
-  const webhook_url = normalizeText(body?.webhook_url);
-  const api_key = normalizeText(body?.api_key);
-
   const payload: Record<string, unknown> = {
     name,
-    description,
-    category,
+    description: normalizeText(body?.description) ?? "",
+    category: normalizeText(body?.category) ?? "General",
     status: "Disconnected",
   };
 
+  const webhook_url = normalizeText(body?.webhook_url);
   if (webhook_url) payload.webhook_url = webhook_url;
+  const api_key = normalizeText(body?.api_key);
   if (api_key) payload.api_key = api_key;
   if (body?.config && typeof body.config === "object") payload.config = body.config;
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("integrations")
-    .insert(payload)
-    .select(INTEGRATION_COLUMNS)
-    .single();
+  try {
+    const data = await insertDoc("integrations", payload);
 
-  if (error) {
-    console.error("Failed to create integration:", error.message);
-    return NextResponse.json({ error: `Failed to create integration: ${error.message}` }, { status: 500 });
+    await logActivity({
+      userId, action: "Created", entityType: "integration", entityId: data.id,
+      details: { target_name: data.name as string, status: data.status as string },
+    });
+
+    return NextResponse.json({ integration: serializeDoc(data) }, { status: 201 });
+  } catch (error) {
+    console.error("Failed to create integration:", error);
+    return NextResponse.json({ error: "Failed to create integration" }, { status: 500 });
   }
-
-  await logActivity({
-    userId,
-    action: "Created",
-    entityType: "integration",
-    entityId: data.id,
-    details: { target_name: data.name, status: data.status },
-  });
-
-  return NextResponse.json({ integration: data }, { status: 201 });
 }
 
 export async function PATCH(req: Request) {
@@ -96,32 +79,23 @@ export async function PATCH(req: Request) {
   if (body?.config !== undefined) updates.config = body.config;
   if (body?.last_sync !== undefined) updates.last_sync = body.last_sync;
 
-  if (Object.keys(updates).length === 0) {
+  if (Object.keys(updates).length === 0)
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
-  }
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("integrations")
-    .update(updates)
-    .eq("id", id)
-    .select(INTEGRATION_COLUMNS)
-    .single();
+  try {
+    const data = await updateDoc("integrations", id, updates);
+    if (!data) return NextResponse.json({ error: "Integration not found" }, { status: 404 });
 
-  if (error) {
-    console.error("Failed to update integration:", error.message);
+    await logActivity({
+      userId, action: "Updated", entityType: "integration", entityId: data.id,
+      details: { target_name: data.name as string, status: data.status as string },
+    });
+
+    return NextResponse.json({ integration: serializeDoc(data) });
+  } catch (error) {
+    console.error("Failed to update integration:", error);
     return NextResponse.json({ error: "Failed to update integration" }, { status: 500 });
   }
-
-  await logActivity({
-    userId,
-    action: "Updated",
-    entityType: "integration",
-    entityId: data.id,
-    details: { target_name: data.name, status: data.status },
-  });
-
-  return NextResponse.json({ integration: data });
 }
 
 export async function DELETE(req: Request) {
@@ -132,26 +106,20 @@ export async function DELETE(req: Request) {
   const id = normalizeText(body?.id);
   if (!id) return NextResponse.json({ error: "Integration id required" }, { status: 400 });
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("integrations")
-    .delete()
-    .eq("id", id)
-    .select("id,name")
-    .single();
+  try {
+    const integration = await getDoc("integrations", id);
+    if (!integration) return NextResponse.json({ error: "Integration not found" }, { status: 404 });
 
-  if (error) {
-    console.error("Failed to delete integration:", error.message);
+    await deleteDoc("integrations", id);
+
+    await logActivity({
+      userId, action: "Deleted", entityType: "integration", entityId: id,
+      details: { target_name: integration.name as string },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete integration:", error);
     return NextResponse.json({ error: "Failed to delete integration" }, { status: 500 });
   }
-
-  await logActivity({
-    userId,
-    action: "Deleted",
-    entityType: "integration",
-    entityId: data.id,
-    details: { target_name: data.name },
-  });
-
-  return NextResponse.json({ success: true });
 }

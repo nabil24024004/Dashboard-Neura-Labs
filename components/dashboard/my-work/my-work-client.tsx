@@ -93,7 +93,7 @@ export function MyWorkClient({ workItems: initialItems, tasks: initialTasks }: P
                 const res = await fetch("/api/work-items/status", {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ work_item_id: workItemId, status: newStatus }),
+                    body: JSON.stringify({ id: workItemId, status: newStatus }),
                 });
                 if (res.ok) {
                     const data = await res.json();
@@ -170,8 +170,8 @@ export function MyWorkClient({ workItems: initialItems, tasks: initialTasks }: P
                         key={f}
                         onClick={() => setFilter(f)}
                         className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${filter === f
-                                ? "bg-primary/10 text-primary border-primary/30"
-                                : "border-border text-muted-foreground hover:text-foreground"
+                            ? "bg-primary/10 text-primary border-primary/30"
+                            : "border-border text-muted-foreground hover:text-foreground"
                             }`}
                     >
                         {f === "all" ? "All" : STATUS_CONFIG[f]?.label || f}

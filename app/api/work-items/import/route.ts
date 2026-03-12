@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { logActivity } from "@/lib/activity-log";
+import { queryDocs } from "@/lib/firebase/db";
 
 interface ImportAssignment {
     member: string;
@@ -37,18 +36,15 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Invalid JSON format" }, { status: 400 });
     }
 
-    const supabase = createAdminClient();
-
     // Fetch all team members for name matching
-    const { data: users } = await supabase.from("users").select("id,first_name,last_name,email");
-    const teamMembers = users ?? [];
+    const teamMembers = await queryDocs("users");
 
     function findMember(name: string) {
         const lower = name.toLowerCase().trim();
         return teamMembers.find((m) => {
             const fullName = `${m.first_name ?? ""} ${m.last_name ?? ""}`.trim().toLowerCase();
-            const firstName = (m.first_name ?? "").toLowerCase();
-            const lastName = (m.last_name ?? "").toLowerCase();
+            const firstName = (m.first_name as string ?? "").toLowerCase();
+            const lastName = (m.last_name as string ?? "").toLowerCase();
             return fullName === lower || firstName === lower || lastName === lower;
         });
     }

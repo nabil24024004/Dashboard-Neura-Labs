@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import {
+    queryDocs, getDoc, insertDoc, updateDoc,
+    deleteDoc, deleteDocs, serializeDoc, countDocs,
+} from "@/lib/firebase/db";
 import { logActivity } from "@/lib/activity-log";
-
-const PROJECT_COLUMNS =
-    "id,client_id,project_name,service_type,status,deadline,budget,progress,description,assigned_team,created_at,work_breakdown_imported,clients(company_name)";
 
 function normalizeText(value: unknown): string | null {
     if (typeof value !== "string") return null;
@@ -33,22 +33,35 @@ function normalizeDate(value: unknown): string | null {
     return d.toISOString().split("T")[0];
 }
 
+async function enrichWithClientName(doc: Record<string, unknown>) {
+    if (doc.client_id && !doc.client_name) {
+        const client = await getDoc("clients", doc.client_id as string);
+        if (client) doc.client_name = client.company_name;
+    }
+    // Provide nested shape for backwards-compat with frontend
+    return {
+        ...doc,
+        clients: doc.client_name ? { company_name: doc.client_name } : null,
+    };
+}
+
 export async function GET() {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-        .from("projects")
-        .select(PROJECT_COLUMNS)
-        .order("created_at", { ascending: false });
+    try {
+        const data = await queryDocs(
+            "projects",
+            [],
+            [{ field: "created_at", direction: "desc" }]
+        );
 
-    if (error) {
-        console.error("Failed to fetch projects:", error.message);
+        const enriched = await Promise.all(data.map((d) => enrichWithClientName(serializeDoc(d))));
+        return NextResponse.json({ projects: enriched });
+    } catch (error) {
+        console.error("Failed to fetch projects:", error);
         return NextResponse.json({ error: "Failed to fetch projects" }, { status: 500 });
     }
-
-    return NextResponse.json({ projects: data ?? [] });
 }
 
 export async function POST(req: Request) {
@@ -64,11 +77,18 @@ export async function POST(req: Request) {
     if (!client_id) return NextResponse.json({ error: "Client is required" }, { status: 400 });
     if (!service_type) return NextResponse.json({ error: "Service type is required" }, { status: 400 });
 
+    // Denormalize client name
+    let client_name: string | null = null;
+    const client = await getDoc("clients", client_id);
+    if (client) client_name = client.company_name as string;
+
     const payload: Record<string, unknown> = {
         project_name,
         client_id,
+        client_name,
         service_type,
         status: normalizeStatus(body?.status),
+        progress: 0,
     };
 
     const deadline = normalizeDate(body?.deadline);
@@ -78,104 +98,81 @@ export async function POST(req: Request) {
     const description = normalizeText(body?.description);
     if (description) payload.description = description;
 
-    const supabase = createAdminClient();
+    try {
+        const data = await insertDoc("projects", payload);
 
-    // Create project
-    const { data, error } = await supabase
-        .from("projects")
-        .insert(payload)
-        .select(PROJECT_COLUMNS)
-        .single();
+        // Create work items + assignments if provided (from wizard Step 2)
+        const workItems = Array.isArray(body?.work_items) ? body.work_items : [];
+        if (workItems.length > 0) {
+            for (let i = 0; i < workItems.length; i++) {
+                const wi = workItems[i];
+                const wiPayload: Record<string, unknown> = {
+                    project_id: data.id,
+                    title: wi.title,
+                    category: wi.category || "General",
+                    description: wi.description || null,
+                    estimated_hours: wi.estimated_hours ?? null,
+                    due_date: wi.due_date ? normalizeDate(wi.due_date) : null,
+                    sort_order: wi.sort_order ?? i,
+                    status: "not_started",
+                    created_by: userId,
+                };
 
-    if (error) {
-        console.error("Failed to create project:", error.message);
-        return NextResponse.json({ error: `Failed to create project: ${error.message}` }, { status: 500 });
-    }
+                const createdWi = await insertDoc("work_items", wiPayload);
 
-    // Create work items + assignments if provided (from wizard Step 2)
-    const workItems = Array.isArray(body?.work_items) ? body.work_items : [];
-    if (workItems.length > 0) {
-        for (let i = 0; i < workItems.length; i++) {
-            const wi = workItems[i];
-            const wiPayload: Record<string, unknown> = {
-                project_id: data.id,
-                title: wi.title,
-                category: wi.category || "General",
-                description: wi.description || null,
-                estimated_hours: wi.estimated_hours ?? null,
-                due_date: wi.due_date ? normalizeDate(wi.due_date) : null,
-                sort_order: wi.sort_order ?? i,
-                status: "not_started",
-                created_by: userId,
-            };
-
-            const { data: createdWi, error: wiError } = await supabase
-                .from("project_work_items")
-                .insert(wiPayload)
-                .select("id")
-                .single();
-
-            if (wiError) {
-                console.error("Failed to create work item:", wiError.message);
-                continue;
-            }
-
-            // Create assignments for this work item
-            const assignments = Array.isArray(wi.assignments) ? wi.assignments : [];
-            if (assignments.length > 0 && createdWi) {
-                const assignPayloads = assignments.map((a: { member_id: string; role_on_item?: string }) => ({
-                    work_item_id: createdWi.id,
-                    member_id: a.member_id,
-                    role_on_item: a.role_on_item || "assignee",
-                    assigned_by: userId,
-                }));
-
-                const { error: assignError } = await supabase
-                    .from("work_item_assignments")
-                    .insert(assignPayloads);
-
-                if (assignError) {
-                    console.error("Failed to create assignments:", assignError.message);
+                // Create assignments for this work item
+                const assignments = Array.isArray(wi.assignments) ? wi.assignments : [];
+                if (assignments.length > 0 && createdWi) {
+                    for (const a of assignments) {
+                        await insertDoc("work_item_assignments", {
+                            work_item_id: createdWi.id,
+                            member_id: a.member_id,
+                            role_on_item: a.role_on_item || "assignee",
+                            assigned_by: userId,
+                            assigned_at: new Date().toISOString(),
+                        });
+                    }
                 }
             }
+
+            // Mark as having work breakdown imported if JSON was used
+            if (body?.work_breakdown_imported) {
+                await updateDoc("projects", data.id, { work_breakdown_imported: true });
+            }
+
+            // Recompute progress
+            const { computeProjectProgress } = await import("@/lib/firebase/queries");
+            await computeProjectProgress(data.id);
+
+            // Refetch project
+            const updated = await getDoc("projects", data.id);
+            if (updated) {
+                await logActivity({
+                    userId,
+                    action: "Created",
+                    entityType: "project",
+                    entityId: updated.id,
+                    details: { target_name: updated.project_name as string, work_items_count: workItems.length },
+                });
+                const enriched = await enrichWithClientName(serializeDoc(updated));
+                return NextResponse.json({ project: enriched }, { status: 201 });
+            }
         }
 
-        // Mark as having work breakdown imported if JSON was used
-        if (body?.work_breakdown_imported) {
-            await supabase
-                .from("projects")
-                .update({ work_breakdown_imported: true })
-                .eq("id", data.id);
-        }
+        await logActivity({
+            userId,
+            action: "Created",
+            entityType: "project",
+            entityId: data.id,
+            details: { target_name: data.project_name as string },
+        });
 
-        // Refetch project to get updated progress (trigger may have set it)
-        const { data: updated } = await supabase
-            .from("projects")
-            .select(PROJECT_COLUMNS)
-            .eq("id", data.id)
-            .single();
-
-        if (updated) {
-            await logActivity({
-                userId,
-                action: "Created",
-                entityType: "project",
-                entityId: updated.id,
-                details: { target_name: updated.project_name, work_items_count: workItems.length },
-            });
-            return NextResponse.json({ project: updated }, { status: 201 });
-        }
+        const enriched = await enrichWithClientName(serializeDoc(data));
+        return NextResponse.json({ project: enriched }, { status: 201 });
+    } catch (error) {
+        console.error("Failed to create project:", error);
+        return NextResponse.json({ error: "Failed to create project" }, { status: 500 });
     }
-
-    await logActivity({
-        userId,
-        action: "Created",
-        entityType: "project",
-        entityId: data.id,
-        details: { target_name: data.project_name },
-    });
-
-    return NextResponse.json({ project: data }, { status: 201 });
 }
 
 export async function PATCH(req: Request) {
@@ -193,33 +190,28 @@ export async function PATCH(req: Request) {
     if (body?.deadline !== undefined) updates.deadline = normalizeDate(body.deadline);
     if (body?.budget !== undefined) updates.budget = normalizeNumber(body.budget);
     if (body?.description !== undefined) updates.description = normalizeText(body.description);
-    // progress is now computed by the DB trigger — no longer manually editable
 
     if (Object.keys(updates).length === 0)
         return NextResponse.json({ error: "No fields provided" }, { status: 400 });
 
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-        .from("projects")
-        .update(updates)
-        .eq("id", id)
-        .select(PROJECT_COLUMNS)
-        .single();
+    try {
+        const data = await updateDoc("projects", id, updates);
+        if (!data) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-    if (error) {
-        console.error("Failed to update project:", error.message);
+        await logActivity({
+            userId,
+            action: "Updated",
+            entityType: "project",
+            entityId: data.id,
+            details: { target_name: data.project_name as string, status: data.status as string },
+        });
+
+        const enriched = await enrichWithClientName(serializeDoc(data));
+        return NextResponse.json({ project: enriched });
+    } catch (error) {
+        console.error("Failed to update project:", error);
         return NextResponse.json({ error: "Failed to update project" }, { status: 500 });
     }
-
-    await logActivity({
-        userId,
-        action: "Updated",
-        entityType: "project",
-        entityId: data.id,
-        details: { target_name: data.project_name, status: data.status },
-    });
-
-    return NextResponse.json({ project: data });
 }
 
 export async function DELETE(req: Request) {
@@ -230,71 +222,41 @@ export async function DELETE(req: Request) {
     const id = normalizeText(body?.id);
     if (!id) return NextResponse.json({ error: "Project id is required" }, { status: 400 });
 
-    const supabase = createAdminClient();
+    try {
+        const proj = await getDoc("projects", id);
+        if (!proj) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-    // Get project name before deletion for activity log
-    const { data: proj, error: fetchError } = await supabase
-        .from("projects")
-        .select("id,project_name")
-        .eq("id", id)
-        .single();
+        // Get all work item IDs for this project
+        const workItems = await queryDocs("work_items", [{ field: "project_id", op: "==", value: id }]);
+        const wiIds = workItems.map((wi) => wi.id);
 
-    if (fetchError || !proj) {
-        return NextResponse.json({ error: "Project not found" }, { status: 404 });
+        if (wiIds.length > 0) {
+            // Delete status logs and assignments for these work items
+            for (const wiId of wiIds) {
+                await deleteDocs("work_item_status_log", [{ field: "work_item_id", op: "==", value: wiId }]);
+                await deleteDocs("work_item_assignments", [{ field: "work_item_id", op: "==", value: wiId }]);
+            }
+            // Delete the work items
+            await deleteDocs("work_items", [{ field: "project_id", op: "==", value: id }]);
+        }
+
+        // Delete tasks linked to this project
+        await deleteDocs("tasks", [{ field: "project_id", op: "==", value: id }]);
+
+        // Delete the project
+        await deleteDoc("projects", id);
+
+        await logActivity({
+            userId,
+            action: "Deleted",
+            entityType: "project",
+            entityId: proj.id,
+            details: { target_name: proj.project_name as string },
+        });
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("Failed to delete project:", error);
+        return NextResponse.json({ error: "Failed to delete project" }, { status: 500 });
     }
-
-    // CASCADE: Get all work item IDs for this project
-    const { data: workItems } = await supabase
-        .from("project_work_items")
-        .select("id")
-        .eq("project_id", id);
-
-    const wiIds = (workItems ?? []).map((wi: { id: string }) => wi.id);
-
-    if (wiIds.length > 0) {
-        // Delete status logs for these work items
-        await supabase
-            .from("work_item_status_log")
-            .delete()
-            .in("work_item_id", wiIds);
-
-        // Delete assignments for these work items
-        await supabase
-            .from("work_item_assignments")
-            .delete()
-            .in("work_item_id", wiIds);
-
-        // Delete the work items themselves
-        await supabase
-            .from("project_work_items")
-            .delete()
-            .eq("project_id", id);
-    }
-
-    // Delete tasks linked to this project
-    await supabase
-        .from("tasks")
-        .delete()
-        .eq("project_id", id);
-
-    // Now delete the project
-    const { error: deleteError } = await supabase
-        .from("projects")
-        .delete()
-        .eq("id", id);
-
-    if (deleteError) {
-        console.error("Failed to delete project:", deleteError.message);
-        return NextResponse.json({ error: `Failed to delete project: ${deleteError.message}` }, { status: 500 });
-    }
-
-    await logActivity({
-        userId,
-        action: "Deleted",
-        entityType: "project",
-        entityId: proj.id,
-        details: { target_name: proj.project_name },
-    });
-
-    return NextResponse.json({ success: true });
 }

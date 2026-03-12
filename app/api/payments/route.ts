@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { queryDocs, getDoc, insertDoc, updateDoc, deleteDoc, serializeDoc } from "@/lib/firebase/db";
 import { logActivity } from "@/lib/activity-log";
-
-const PAYMENT_COLUMNS =
-  "id,invoice_id,amount,payment_date,payment_method,notes,created_at,invoices(invoice_number,amount,clients(company_name))";
 
 function normalizeText(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -23,33 +20,38 @@ function normalizeNumber(value: unknown): number | null {
   return isFinite(n) && n > 0 ? n : null;
 }
 
-function paymentTargetName(paymentRow: {
-  id: string;
-  invoices?: { invoice_number?: string } | { invoice_number?: string }[] | null;
-}) {
-  const maybeInvoice = Array.isArray(paymentRow.invoices)
-    ? paymentRow.invoices[0]
-    : paymentRow.invoices;
-
-  return maybeInvoice?.invoice_number ?? `Payment ${paymentRow.id.slice(0, 8)}`;
+async function enrichPayment(doc: Record<string, unknown>) {
+  // Build nested invoices shape for backwards-compat
+  if (doc.invoice_id) {
+    const invoice = await getDoc("invoices", doc.invoice_id as string);
+    if (invoice) {
+      let client_name: string | null = null;
+      if (invoice.client_id) {
+        const client = await getDoc("clients", invoice.client_id as string);
+        if (client) client_name = client.company_name as string;
+      }
+      doc.invoices = {
+        invoice_number: invoice.invoice_number,
+        amount: invoice.amount,
+        clients: client_name ? { company_name: client_name } : null,
+      };
+    }
+  }
+  return doc;
 }
 
 export async function GET() {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("payments")
-    .select(PAYMENT_COLUMNS)
-    .order("payment_date", { ascending: false });
-
-  if (error) {
-    console.error("Failed to fetch payments:", error.message);
+  try {
+    const data = await queryDocs("payments", [], [{ field: "created_at", direction: "desc" }]);
+    const enriched = await Promise.all(data.map(async (d) => enrichPayment(serializeDoc(d))));
+    return NextResponse.json({ payments: enriched });
+  } catch (error) {
+    console.error("Failed to fetch payments:", error);
     return NextResponse.json({ error: "Failed to fetch payments" }, { status: 500 });
   }
-
-  return NextResponse.json({ payments: data ?? [] });
 }
 
 export async function POST(req: Request) {
@@ -63,8 +65,6 @@ export async function POST(req: Request) {
   const amount = normalizeNumber(body?.amount);
   if (!amount) return NextResponse.json({ error: "Valid amount is required" }, { status: 400 });
 
-  const supabase = createAdminClient();
-
   const payload: Record<string, unknown> = { invoice_id, amount };
   const payment_date = normalizeDate(body?.payment_date);
   if (payment_date) payload.payment_date = payment_date;
@@ -73,52 +73,37 @@ export async function POST(req: Request) {
   const notes = normalizeText(body?.notes);
   if (notes) payload.notes = notes;
 
-  const { data: paymentRow, error: payError } = await supabase
-    .from("payments")
-    .insert(payload)
-    .select(PAYMENT_COLUMNS)
-    .single();
+  try {
+    const paymentRow = await insertDoc("payments", payload);
+    const enriched = await enrichPayment(serializeDoc(paymentRow));
 
-  if (payError) {
-    console.error("Failed to record payment:", payError.message);
-    return NextResponse.json({ error: `Failed to record payment: ${payError.message}` }, { status: 500 });
+    const invoiceNumber = (enriched.invoices as Record<string, unknown>)?.invoice_number;
+    await logActivity({
+      userId,
+      action: "Recorded",
+      entityType: "payment",
+      entityId: paymentRow.id,
+      details: {
+        target_name: (invoiceNumber as string) ?? `Payment ${paymentRow.id.slice(0, 8)}`,
+        amount: paymentRow.amount,
+      },
+    });
+
+    // Auto-update invoice status
+    const invoice = await getDoc("invoices", invoice_id);
+    if (invoice) {
+      const allPayments = await queryDocs("payments", [{ field: "invoice_id", op: "==", value: invoice_id }]);
+      const totalPaid = allPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const invoiceAmount = Number(invoice.amount);
+      const newStatus = totalPaid >= invoiceAmount ? "Paid" : "Partial";
+      await updateDoc("invoices", invoice_id, { status: newStatus });
+    }
+
+    return NextResponse.json({ payment: enriched }, { status: 201 });
+  } catch (error) {
+    console.error("Failed to record payment:", error);
+    return NextResponse.json({ error: "Failed to record payment" }, { status: 500 });
   }
-
-  await logActivity({
-    userId,
-    action: "Recorded",
-    entityType: "payment",
-    entityId: paymentRow.id,
-    details: {
-      target_name: paymentTargetName(paymentRow),
-      amount: paymentRow.amount,
-    },
-  });
-
-  // Auto-update invoice status: sum all payments for this invoice; if >= invoice amount → Paid, else → Partial
-  const { data: invoice } = await supabase
-    .from("invoices")
-    .select("amount")
-    .eq("id", invoice_id)
-    .single();
-
-  if (invoice) {
-    const { data: allPayments } = await supabase
-      .from("payments")
-      .select("amount")
-      .eq("invoice_id", invoice_id);
-
-    const totalPaid = (allPayments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
-    const invoiceAmount = Number(invoice.amount);
-    const newStatus = totalPaid >= invoiceAmount ? "Paid" : "Partial";
-
-    await supabase
-      .from("invoices")
-      .update({ status: newStatus })
-      .eq("id", invoice_id);
-  }
-
-  return NextResponse.json({ payment: paymentRow }, { status: 201 });
 }
 
 export async function DELETE(req: Request) {
@@ -129,26 +114,23 @@ export async function DELETE(req: Request) {
   const id = normalizeText(body?.id);
   if (!id) return NextResponse.json({ error: "Payment id required" }, { status: 400 });
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("payments")
-    .delete()
-    .eq("id", id)
-    .select("id,invoice_id")
-    .single();
+  try {
+    const payment = await getDoc("payments", id);
+    if (!payment) return NextResponse.json({ error: "Payment not found" }, { status: 404 });
 
-  if (error) {
-    console.error("Failed to delete payment:", error.message);
+    await deleteDoc("payments", id);
+
+    await logActivity({
+      userId,
+      action: "Deleted",
+      entityType: "payment",
+      entityId: id,
+      details: { target_name: `Payment ${id.slice(0, 8)}`, invoice_id: payment.invoice_id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete payment:", error);
     return NextResponse.json({ error: "Failed to delete payment" }, { status: 500 });
   }
-
-  await logActivity({
-    userId,
-    action: "Deleted",
-    entityType: "payment",
-    entityId: data.id,
-    details: { target_name: `Payment ${data.id.slice(0, 8)}`, invoice_id: data.invoice_id },
-  });
-
-  return NextResponse.json({ success: true });
 }

@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect, useState, useTransition, useCallback } from "react";
+import dynamic from "next/dynamic";
+import { useState, useTransition, useCallback } from "react";
+import type { CellContext, ColumnDef } from "@tanstack/react-table";
 import { Project, columns } from "./project-columns";
 import { ProjectDataTable } from "./project-data-table";
-import { ProjectsKanban } from "./project-kanban-view";
 import { ProjectWizard } from "./project-wizard";
 import { Button } from "@/components/ui/button";
 import { LayoutGrid, List, Plus, FolderKanban } from "lucide-react";
+
+const ProjectsKanban = dynamic(
+  () => import("./project-kanban-view").then((module) => module.ProjectsKanban),
+  { ssr: false }
+);
 
 interface ProjectViewSwitcherProps {
   initialData: Project[];
@@ -50,11 +56,11 @@ export function ProjectViewSwitcher({ initialData }: ProjectViewSwitcherProps) {
   }
 
   // Columns with live delete wired in
-  const columnsWithActions = [
+  const columnsWithActions: ColumnDef<Project>[] = [
     ...columns.filter((c) => c.id !== "actions"),
     {
       id: "actions",
-      cell: ({ row }: any) => (
+      cell: ({ row }: CellContext<Project, unknown>) => (
         <Button
           variant="ghost"
           size="sm"
@@ -116,7 +122,7 @@ export function ProjectViewSwitcher({ initialData }: ProjectViewSwitcherProps) {
             </Button>
           </div>
         ) : view === "table" ? (
-          <ProjectDataTable columns={columnsWithActions as any} data={projects} />
+          <ProjectDataTable columns={columnsWithActions} data={projects} />
         ) : (
           <ProjectsKanban initialProjects={projects} />
         )}

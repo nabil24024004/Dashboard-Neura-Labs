@@ -1,4 +1,5 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { queryDocs } from "@/lib/firebase/db";
+import { buildFinanceDashboardMetrics, getEffectiveInvoiceStatus, isOpenReceivable, type InvoiceSnapshot, type PaymentSnapshot } from "@/lib/invoices/metrics";
 import { AnalyticsCharts } from "@/components/dashboard/analytics/analytics-charts";
 import { AutoRefresh } from "@/components/dashboard/overview/auto-refresh";
 
@@ -32,6 +33,18 @@ interface InvoiceRow {
 
 interface ClientRow {
   created_at: string;
+}
+
+interface MeetingRow {
+  scheduled_at: string | null;
+}
+
+interface AgreementRow {
+  status: string | null;
+}
+
+interface FileRow {
+  file_size: number | null;
 }
 
 interface TaskRow {
@@ -164,7 +177,6 @@ function formatDayDelta(target: Date, baseline: Date): string {
 }
 
 export default async function AnalyticsPage() {
-  const db = createAdminClient();
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -172,42 +184,73 @@ export default async function AnalyticsPage() {
   const nextWeek = new Date(today);
   nextWeek.setDate(nextWeek.getDate() + 7);
 
-  const [paymentsResult, projectsResult, invoicesResult, clientsResult, tasksResult, wiAssignResult] = await Promise.all([
-    db.from("payments").select("amount, payment_date, created_at").order("created_at", { ascending: true }),
-    db
-      .from("projects")
-      .select("id, project_name, service_type, status, budget, progress, deadline, created_at"),
-    db.from("invoices").select("id, amount, status, due_date, issue_date, created_at"),
-    db.from("clients").select("created_at").is("deleted_at", null),
-    db.from("tasks").select("id, title, status, priority, deadline, created_at"),
-    db.from("work_item_assignments")
-      .select("member_id, role_on_item, work_items:work_item_id(status), users:member_id(first_name, last_name)")
+  const [
+    paymentsResult,
+    projectsResult,
+    invoicesResult,
+    clientsResult,
+    tasksResult,
+    meetingsResult,
+    agreementsResult,
+    filesResult,
+    wiAssignmentsResult,
+    usersResult,
+    workItemsResult
+  ] = await Promise.all([
+    queryDocs("payments", [], [{ field: "created_at", direction: "asc" }]),
+    queryDocs("projects"),
+    queryDocs("invoices"),
+    queryDocs("clients", [{ field: "deleted_at", op: "==", value: null }]),
+    queryDocs("tasks"),
+    queryDocs("meetings"),
+    queryDocs("agreements"),
+    queryDocs("files"),
+    queryDocs("work_item_assignments"),
+    queryDocs("users"),
+    queryDocs("work_items")
   ]);
 
-  const payments = (paymentsResult.data ?? []) as PaymentRow[];
-  const projects = (projectsResult.data ?? []) as ProjectRow[];
-  const invoices = (invoicesResult.data ?? []) as InvoiceRow[];
-  const clients = (clientsResult.data ?? []) as ClientRow[];
-  const tasks = (tasksResult.data ?? []) as TaskRow[];
+  const payments = paymentsResult as unknown as PaymentRow[];
+  const projects = projectsResult as unknown as ProjectRow[];
+  const invoices = invoicesResult as unknown as InvoiceRow[];
+  const clients = clientsResult as unknown as ClientRow[];
+  const tasks = tasksResult as unknown as TaskRow[];
+  const meetings = meetingsResult as unknown as MeetingRow[];
+  const agreements = agreementsResult as unknown as AgreementRow[];
+  const files = filesResult as unknown as FileRow[];
 
-  // Phase 6.10: Team workload from work_item_assignments
-  const wiAssignments = ((wiAssignResult.data ?? []) as unknown as {
-    member_id: string;
-    role_on_item: string;
-    work_items: { status: string } | { status: string }[] | null;
-    users: { first_name: string; last_name: string } | { first_name: string; last_name: string }[] | null;
-  }[]);
+  const financeMetrics = buildFinanceDashboardMetrics({
+    invoices: invoices.map((invoice) => ({
+      id: invoice.id,
+      amount: Number(invoice.amount) || 0,
+      status: invoice.status as InvoiceSnapshot["status"],
+      due_date: invoice.due_date,
+      issue_date: invoice.issue_date,
+      created_at: invoice.created_at,
+    })),
+    payments: payments.map((payment) => ({
+      id: payment.created_at,
+      amount: Number(payment.amount) || 0,
+      payment_date: payment.payment_date,
+      created_at: payment.created_at,
+    })) satisfies PaymentSnapshot[],
+    now,
+  });
 
+  // Join data for team workload
   const memberMap = new Map<string, TeamMemberWorkload>();
-  for (const a of wiAssignments) {
-    const user = Array.isArray(a.users) ? a.users[0] : a.users;
-    const wi = Array.isArray(a.work_items) ? a.work_items[0] : a.work_items;
-    const name = user ? `${user.first_name} ${user.last_name}` : a.member_id.slice(0, 8);
-    const status = wi?.status || "not_started";
-    if (!memberMap.has(a.member_id)) {
-      memberMap.set(a.member_id, { name, total: 0, not_started: 0, in_progress: 0, in_review: 0, done: 0 });
+  for (const a of wiAssignmentsResult) {
+    const user = usersResult.find((u) => u.id === a.member_id);
+    const wi = workItemsResult.find((w) => w.id === a.work_item_id);
+
+    // Fallback to name extraction or truncation if not found
+    const name = user ? `${user.first_name} ${user.last_name}` : (a.member_id as string).slice(0, 8);
+    const status = (wi?.status as string) || "not_started";
+
+    if (!memberMap.has(a.member_id as string)) {
+      memberMap.set(a.member_id as string, { name, total: 0, not_started: 0, in_progress: 0, in_review: 0, done: 0 });
     }
-    const member = memberMap.get(a.member_id)!;
+    const member = memberMap.get(a.member_id as string)!;
     member.total += 1;
     if (status === "not_started") member.not_started += 1;
     else if (status === "in_progress") member.in_progress += 1;
@@ -217,14 +260,24 @@ export default async function AnalyticsPage() {
 
   const teamWorkload: TeamMemberWorkload[] = Array.from(memberMap.values()).sort((a, b) => b.total - a.total);
 
-  const totalCollected = payments.reduce((sum, p) => sum + (p.amount ?? 0), 0);
-  const totalInvoiced = invoices.reduce((sum, invoice) => sum + (invoice.amount ?? 0), 0);
-  const paidAmount = invoices
-    .filter((invoice) => invoice.status === "Paid")
-    .reduce((sum, invoice) => sum + (invoice.amount ?? 0), 0);
-  const outstandingAmount = invoices
-    .filter((invoice) => invoice.status !== "Paid")
-    .reduce((sum, invoice) => sum + (invoice.amount ?? 0), 0);
+  const totalCollected = financeMetrics.cashFlow.collectedAllTime;
+  const totalInvoiced = invoices.reduce((sum, invoice) => {
+    const status = getEffectiveInvoiceStatus(
+      {
+        id: invoice.id,
+        amount: Number(invoice.amount) || 0,
+        status: invoice.status as InvoiceSnapshot["status"],
+        due_date: invoice.due_date,
+        issue_date: invoice.issue_date,
+        created_at: invoice.created_at,
+      },
+      now
+    );
+    if (status === "Draft") return sum;
+    return sum + (Number(invoice.amount) || 0);
+  }, 0);
+  const paidAmount = financeMetrics.invoiceState.paidInvoiceAmount;
+  const outstandingAmount = financeMetrics.invoiceState.openInvoiceAmount;
 
   const completedProjects = projects.filter((project) => project.status === "Completed").length;
   const activeProjects = projects.filter((project) => project.status !== "Completed").length;
@@ -233,17 +286,8 @@ export default async function AnalyticsPage() {
   const openTasks = tasks.filter((task) => task.status !== "Done").length;
   const urgentTasks = tasks.filter((task) => task.status !== "Done" && task.priority === "Urgent").length;
 
-  const currentMonthCollected = payments.reduce((sum, payment) => {
-    const date = parseDate(payment.payment_date || payment.created_at);
-    if (!date || date < currentMonthStart) return sum;
-    return sum + (payment.amount ?? 0);
-  }, 0);
-
-  const previousMonthCollected = payments.reduce((sum, payment) => {
-    const date = parseDate(payment.payment_date || payment.created_at);
-    if (!date || date < previousMonthStart || date >= currentMonthStart) return sum;
-    return sum + (payment.amount ?? 0);
-  }, 0);
+  const currentMonthCollected = financeMetrics.cashFlow.collectedCurrentMonth;
+  const previousMonthCollected = financeMetrics.cashFlow.collectedPreviousMonth;
 
   const currentMonthClients = clients.reduce((total, client) => {
     const date = parseDate(client.created_at);
@@ -257,7 +301,7 @@ export default async function AnalyticsPage() {
     return total + 1;
   }, 0);
 
-  const collectionRate = totalInvoiced === 0 ? 0 : (paidAmount / totalInvoiced) * 100;
+  const settlementRate = financeMetrics.invoiceState.settlementRate;
   const revenueDelta = percentageChange(currentMonthCollected, previousMonthCollected);
   const clientDelta = percentageChange(currentMonthClients, previousMonthClients);
 
@@ -327,7 +371,18 @@ export default async function AnalyticsPage() {
   };
 
   for (const invoice of invoices) {
-    if (invoice.status === "Paid") continue;
+    const effectiveStatus = getEffectiveInvoiceStatus(
+      {
+        id: invoice.id,
+        amount: Number(invoice.amount) || 0,
+        status: invoice.status as InvoiceSnapshot["status"],
+        due_date: invoice.due_date,
+        issue_date: invoice.issue_date,
+        created_at: invoice.created_at,
+      },
+      now
+    );
+    if (!isOpenReceivable(effectiveStatus)) continue;
     let bucket = "No due date";
     const due = parseDate(invoice.due_date);
     if (due) {
@@ -403,11 +458,30 @@ export default async function AnalyticsPage() {
   }, 0);
 
   const overdueInvoicesCount = invoices.reduce((count, invoice) => {
-    if (invoice.status === "Paid") return count;
-    const due = parseDate(invoice.due_date);
-    if (!due || due >= today) return count;
+    const effectiveStatus = getEffectiveInvoiceStatus(
+      {
+        id: invoice.id,
+        amount: Number(invoice.amount) || 0,
+        status: invoice.status as InvoiceSnapshot["status"],
+        due_date: invoice.due_date,
+        issue_date: invoice.issue_date,
+        created_at: invoice.created_at,
+      },
+      now
+    );
+    return effectiveStatus === "Overdue" ? count + 1 : count;
+  }, 0);
+
+  const meetingsThisWeek = meetings.reduce((count, meeting) => {
+    const scheduled = parseDate(meeting.scheduled_at);
+    if (!scheduled || scheduled < today) return count;
+    if (scheduled > nextWeek) return count;
     return count + 1;
   }, 0);
+  const pendingAgreements = agreements.filter((agreement) => agreement.status === "Pending Signature").length;
+  const activeWorkItems = workItemsResult.filter((item) => item.status !== "done").length;
+  const totalFiles = files.length;
+  const totalFileBytes = files.reduce((sum, file) => sum + (Number(file.file_size) || 0), 0);
 
   const insights: InsightItem[] = [];
   if (overdueInvoicesCount > 0) {
@@ -418,16 +492,16 @@ export default async function AnalyticsPage() {
     });
   }
 
-  if (collectionRate < 75) {
+  if (settlementRate < 75) {
     insights.push({
-      title: "Collection rate is below target",
-      detail: `Current collection rate is ${Math.round(collectionRate)}%. Target a minimum of 80% to stabilize cash flow.`,
+      title: "Settlement rate is below target",
+      detail: `Current settlement rate is ${Math.round(settlementRate)}%. Target a minimum of 80% to stabilize receivables.`,
       tone: "warning",
     });
   } else {
     insights.push({
-      title: "Collections are in a healthy range",
-      detail: `You are collecting ${Math.round(collectionRate)}% of invoiced revenue.`,
+      title: "Invoice settlement is in a healthy range",
+      detail: `${Math.round(settlementRate)}% of non-draft invoiced value is marked settled.`,
       tone: "positive",
     });
   }
@@ -462,6 +536,19 @@ export default async function AnalyticsPage() {
         .filter((project) => project.status !== "Completed")
         .reduce((sum, project) => sum + Math.max(0, Math.min(100, project.progress ?? 0)), 0) / activeProjects;
 
+  const formatFileSize = (bytes: number): string => {
+    if (bytes <= 0) return "0 B";
+    const units = ["B", "KB", "MB", "GB"];
+    let value = bytes;
+    let unitIndex = 0;
+    while (value >= 1024 && unitIndex < units.length - 1) {
+      value /= 1024;
+      unitIndex += 1;
+    }
+    const decimals = value >= 10 || unitIndex === 0 ? 0 : 1;
+    return `${value.toFixed(decimals)} ${units[unitIndex]}`;
+  };
+
   const metrics: AnalyticsMetric[] = [
     {
       label: "Collected Revenue",
@@ -478,11 +565,11 @@ export default async function AnalyticsPage() {
       tone: revenueDelta >= 0 ? "positive" : "warning",
     },
     {
-      label: "Collection Rate",
-      value: `${Math.round(collectionRate)}%`,
+      label: "Settlement Rate",
+      value: `${Math.round(settlementRate)}%`,
       helper: `${moneyFormatter.format(paidAmount)} paid of ${moneyFormatter.format(totalInvoiced)}`,
-      trend: collectionRate >= 80 ? "On target" : "Needs attention",
-      tone: collectionRate >= 80 ? "positive" : collectionRate >= 65 ? "warning" : "critical",
+      trend: settlementRate >= 80 ? "Status-led" : "Needs attention",
+      tone: settlementRate >= 80 ? "positive" : settlementRate >= 65 ? "warning" : "critical",
     },
     {
       label: "Project Completion",
@@ -506,10 +593,10 @@ export default async function AnalyticsPage() {
       tone: clientDelta > 0 ? "positive" : clientDelta < 0 ? "warning" : "neutral",
     },
     {
-      label: "Outstanding Invoices",
+      label: "Open Invoice Balance",
       value: moneyFormatter.format(outstandingAmount),
       helper: `${overdueInvoicesCount} overdue`,
-      trend: `${invoices.filter((invoice) => invoice.status !== "Paid").length} open invoices`,
+      trend: `${financeMetrics.invoiceState.openInvoiceCount} open invoices`,
       tone: overdueInvoicesCount > 0 ? "critical" : "neutral",
     },
     {
@@ -519,6 +606,34 @@ export default async function AnalyticsPage() {
       trend: `Avg progress ${Math.round(averageProgress)}%`,
       tone: averageProgress >= 60 ? "positive" : "warning",
     },
+    {
+      label: "Meetings This Week",
+      value: meetingsThisWeek.toString(),
+      helper: "Upcoming scheduled meetings",
+      trend: meetingsThisWeek > 0 ? "Scheduled" : "No meetings",
+      tone: meetingsThisWeek > 0 ? "neutral" : "warning",
+    },
+    {
+      label: "Pending Agreements",
+      value: pendingAgreements.toString(),
+      helper: "Awaiting signature",
+      trend: pendingAgreements > 0 ? "Needs follow-up" : "Clear",
+      tone: pendingAgreements > 0 ? "warning" : "positive",
+    },
+    {
+      label: "Active Work Items",
+      value: activeWorkItems.toString(),
+      helper: `${teamWorkload.length} members assigned`,
+      trend: activeWorkItems > 0 ? "In delivery" : "No active items",
+      tone: activeWorkItems > 0 ? "neutral" : "warning",
+    },
+    {
+      label: "Files Stored",
+      value: totalFiles.toString(),
+      helper: `${formatFileSize(totalFileBytes)} total storage`,
+      trend: totalFiles > 0 ? "Documents available" : "No files yet",
+      tone: totalFiles > 0 ? "neutral" : "warning",
+    },
   ];
 
   const hasData =
@@ -526,7 +641,11 @@ export default async function AnalyticsPage() {
     projects.length > 0 ||
     invoices.length > 0 ||
     clients.length > 0 ||
-    tasks.length > 0;
+    tasks.length > 0 ||
+    meetings.length > 0 ||
+    agreements.length > 0 ||
+    files.length > 0 ||
+    workItemsResult.length > 0;
 
   return (
     <>

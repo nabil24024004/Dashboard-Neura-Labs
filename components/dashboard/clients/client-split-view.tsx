@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import type { CellContext, ColumnDef } from "@tanstack/react-table";
 import { Client, columns } from "./columns";
 import { DataTable } from "./data-table";
 import {
@@ -94,8 +95,12 @@ function ClientForm({ form, onChange, error, saving, onSave, onCancel }: ClientF
    Main component
 ───────────────────────────────────────────────────────────────────────────── */
 interface ClientsSplitViewProps {
-  initialData: Client[];
+  initialData: ClientRecord[];
 }
+
+type ClientRecord = Client & {
+  notes?: string | null;
+};
 
 const EMPTY_FORM: FormValues = {
   company_name: "",
@@ -108,8 +113,8 @@ const EMPTY_FORM: FormValues = {
 };
 
 export function ClientsSplitView({ initialData }: ClientsSplitViewProps) {
-  const [clients, setClients] = useState<Client[]>(initialData);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [clients, setClients] = useState<ClientRecord[]>(initialData);
+  const [selectedClient, setSelectedClient] = useState<ClientRecord | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState<FormValues>(EMPTY_FORM);
@@ -120,11 +125,11 @@ export function ClientsSplitView({ initialData }: ClientsSplitViewProps) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  const columnsWithSelection = [
+  const columnsWithSelection: ColumnDef<ClientRecord>[] = [
     ...columns.filter((c) => c.id !== "actions"),
     {
       id: "view",
-      cell: ({ row }: any) => (
+      cell: ({ row }: CellContext<ClientRecord, unknown>) => (
         <Button
           variant="ghost"
           size="sm"
@@ -143,7 +148,7 @@ export function ClientsSplitView({ initialData }: ClientsSplitViewProps) {
     setShowAddModal(true);
   }
 
-  function openEdit(client: Client) {
+  function openEdit(client: ClientRecord) {
     setForm({
       company_name: client.company_name,
       contact_person: client.contact_person,
@@ -151,7 +156,7 @@ export function ClientsSplitView({ initialData }: ClientsSplitViewProps) {
       phone: client.phone ?? "",
       country: client.country ?? "",
       status: client.status,
-      notes: (client as any).notes ?? "",
+      notes: client.notes ?? "",
     });
     setError(null);
     setEditMode(true);
@@ -183,7 +188,7 @@ export function ClientsSplitView({ initialData }: ClientsSplitViewProps) {
       });
       const payload = await res.json().catch(() => null);
       if (!res.ok) { setError(payload?.error ?? "Failed to update"); return; }
-      const updated = payload.client as Client;
+      const updated = payload.client as ClientRecord;
       setClients((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
       setSelectedClient(updated);
       setEditMode(false);
@@ -212,7 +217,7 @@ export function ClientsSplitView({ initialData }: ClientsSplitViewProps) {
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <div>
             <h2 className="text-xl font-semibold tracking-tight text-foreground">Clients Directory</h2>
-            <p className="text-sm text-muted-foreground">Manage your agency's clients and leads.</p>
+              <p className="text-sm text-muted-foreground">Manage your agency&apos;s clients and leads.</p>
           </div>
           <Button onClick={openAdd} className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium">
             <Plus className="h-4 w-4 mr-1" /> Add Client
@@ -334,11 +339,11 @@ export function ClientsSplitView({ initialData }: ClientsSplitViewProps) {
                     </div>
                   </div>
 
-                  {(selectedClient as any).notes && (
+                  {selectedClient.notes && (
                     <div className="space-y-2">
                       <h4 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Notes</h4>
                       <p className="text-sm text-muted-foreground bg-background p-4 rounded-lg border border-border leading-relaxed">
-                        {(selectedClient as any).notes}
+                        {selectedClient.notes}
                       </p>
                     </div>
                   )}

@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { queryDocs, serializeDoc } from "@/lib/firebase/db";
 import { IntegrationsClient, Integration } from "@/components/dashboard/integrations/integrations-client";
 
 export const dynamic = "force-dynamic";
@@ -8,17 +8,8 @@ export default async function IntegrationsPage() {
   let initialLoadError: string | null = null;
 
   try {
-    const db = createAdminClient();
-    const { data, error } = await db
-      .from("integrations")
-      .select("*");
-
-    if (error) {
-      console.error("Integrations query error:", error.message, error.code, error.details);
-      initialLoadError = `Could not load integrations: ${error.message}`;
-    } else if (data) {
-      integrations = data as Integration[];
-    }
+    const data = await queryDocs("integrations");
+    integrations = data.map(serializeDoc) as Integration[];
   } catch (err) {
     console.error("Integrations page exception:", err);
     initialLoadError = "Could not load integrations right now.";

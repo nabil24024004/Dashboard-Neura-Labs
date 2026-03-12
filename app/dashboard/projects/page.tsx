@@ -1,16 +1,18 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { queryDocs, serializeDoc } from "@/lib/firebase/db";
 import { ProjectViewSwitcher } from "@/components/dashboard/projects/project-view-switcher";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
-  const supabase = createAdminClient();
-  const { data: projects, error } = await supabase
-    .from("projects")
-    .select("id,client_id,project_name,service_type,status,deadline,budget,progress,description,assigned_team,created_at")
-    .order("created_at", { ascending: false });
+  const data = await queryDocs(
+    "projects",
+    [],
+    [{ field: "created_at", direction: "desc" }]
+  );
 
-  const safeProjects = error ? [] : (projects ?? []);
+  const safeProjects = data.map((project) => serializeDoc(project)) as Parameters<
+    typeof ProjectViewSwitcher
+  >[0]["initialData"];
 
   return <ProjectViewSwitcher initialData={safeProjects} />;
 }

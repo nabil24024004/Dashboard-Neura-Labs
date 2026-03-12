@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import {
+    queryDocs, getDoc, insertDoc, updateDoc, deleteDoc,
+    deleteDocs, insertDocs, serializeDoc
+} from "@/lib/firebase/db";
+import { getMyWorkItems, getCategoryProgress } from "@/lib/firebase/queries";
 import { logActivity } from "@/lib/activity-log";
 
 function normalizeText(value: unknown): string | null {
@@ -21,10 +25,7 @@ function normalizeDate(value: unknown): string | null {
     return d.toISOString().split("T")[0];
 }
 
-const WORK_ITEM_COLUMNS =
-    "id,project_id,title,description,category,status,estimated_hours,actual_hours,due_date,sort_order,created_by,created_at,updated_at";
-
-// GET: list work items for a project (or all for a user via RPC)
+// GET: list work items for a project (or all for a user)
 export async function GET(req: Request) {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -33,66 +34,84 @@ export async function GET(req: Request) {
     const projectId = searchParams.get("project_id");
     const myItems = searchParams.get("my_items") === "true";
 
-    const supabase = createAdminClient();
-
-    // Fetch user's own work items across all projects
-    if (myItems) {
-        const { data, error } = await supabase.rpc("get_my_work_items", { p_user_id: userId });
-        if (error) {
-            console.error("Failed to fetch my work items:", error.message);
-            return NextResponse.json({ error: "Failed to fetch work items" }, { status: 500 });
+    try {
+        // Fetch user's own work items across all projects
+        if (myItems) {
+            const data = await getMyWorkItems(userId);
+            return NextResponse.json({ work_items: data.map(serializeDoc) });
         }
-        return NextResponse.json({ work_items: data ?? [] });
-    }
 
-    // Fetch work items for a specific project
-    if (!projectId) {
-        return NextResponse.json({ error: "project_id is required" }, { status: 400 });
-    }
+        if (!projectId)
+            return NextResponse.json({ error: "project_id is required" }, { status: 400 });
 
-    const { data: items, error: itemsError } = await supabase
-        .from("project_work_items")
-        .select(WORK_ITEM_COLUMNS)
-        .eq("project_id", projectId)
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: true });
+        // Fetch work items for a specific project
+        const items = await queryDocs(
+            "work_items",
+            [{ field: "project_id", op: "==", value: projectId }],
+            [{ field: "sort_order", direction: "asc" }]
+        );
 
-    if (itemsError) {
-        console.error("Failed to fetch work items:", itemsError.message);
+        // Fetch assignments for these items
+        const itemIds = items.map((i) => i.id);
+        let assignments: Record<string, unknown>[] = [];
+
+        if (itemIds.length > 0) {
+            // Firestore `in` supports up to 30 items
+            const chunks: string[][] = [];
+            for (let i = 0; i < itemIds.length; i += 30) {
+                chunks.push(itemIds.slice(i, i + 30));
+            }
+
+            for (const chunk of chunks) {
+                const chunkAssignments = await queryDocs(
+                    "work_item_assignments",
+                    [{ field: "work_item_id", op: "in", value: chunk }]
+                );
+
+                // Enrich with user data
+                for (const a of chunkAssignments) {
+                    if (a.member_id) {
+                        const user = await getDoc("users", a.member_id as string);
+                        if (user) {
+                            (a as Record<string, unknown>).users = {
+                                id: user.id,
+                                first_name: user.first_name,
+                                last_name: user.last_name,
+                                email: user.email,
+                            };
+                        }
+                    }
+                }
+                assignments = assignments.concat(chunkAssignments);
+            }
+        }
+
+        // Group assignments by work_item_id
+        const assignmentMap: Record<string, unknown[]> = {};
+        for (const a of assignments) {
+            const wiId = a.work_item_id as string;
+            if (!assignmentMap[wiId]) assignmentMap[wiId] = [];
+            assignmentMap[wiId].push(a);
+        }
+
+        const enrichedItems = items.map((item) => ({
+            ...serializeDoc(item),
+            assignments: (assignmentMap[item.id] ?? []).map((assignment) =>
+                serializeDoc(assignment as Record<string, unknown>)
+            ),
+        }));
+
+        // Also fetch category progress
+        const categoryProgress = await getCategoryProgress(projectId);
+
+        return NextResponse.json({
+            work_items: enrichedItems,
+            category_progress: categoryProgress,
+        });
+    } catch (error) {
+        console.error("Failed to fetch work items:", error);
         return NextResponse.json({ error: "Failed to fetch work items" }, { status: 500 });
     }
-
-    // Also fetch assignments for these items
-    const itemIds = (items ?? []).map((i: { id: string }) => i.id);
-    let assignments: Record<string, unknown>[] = [];
-    if (itemIds.length > 0) {
-        const { data: assignData } = await supabase
-            .from("work_item_assignments")
-            .select("id,work_item_id,member_id,role_on_item,assigned_at,users:member_id(id,first_name,last_name,email)")
-            .in("work_item_id", itemIds);
-        assignments = assignData ?? [];
-    }
-
-    // Group assignments by work_item_id
-    const assignmentMap: Record<string, unknown[]> = {};
-    for (const a of assignments) {
-        const wiId = (a as { work_item_id: string }).work_item_id;
-        if (!assignmentMap[wiId]) assignmentMap[wiId] = [];
-        assignmentMap[wiId].push(a);
-    }
-
-    const enrichedItems = (items ?? []).map((item: Record<string, unknown>) => ({
-        ...item,
-        assignments: assignmentMap[(item as { id: string }).id] ?? [],
-    }));
-
-    // Also fetch category progress
-    const { data: categoryProgress } = await supabase.rpc("get_category_progress", { p_project_id: projectId });
-
-    return NextResponse.json({
-        work_items: enrichedItems,
-        category_progress: categoryProgress ?? [],
-    });
 }
 
 // POST: create a work item (with assignments)
@@ -106,8 +125,6 @@ export async function POST(req: Request) {
 
     if (!projectId) return NextResponse.json({ error: "project_id is required" }, { status: 400 });
     if (!title) return NextResponse.json({ error: "Title is required" }, { status: 400 });
-
-    const supabase = createAdminClient();
 
     const payload: Record<string, unknown> = {
         project_id: projectId,
@@ -127,56 +144,46 @@ export async function POST(req: Request) {
     const sortOrder = normalizeNumber(body?.sort_order);
     if (sortOrder !== null) payload.sort_order = sortOrder;
 
-    const { data: item, error: itemError } = await supabase
-        .from("project_work_items")
-        .insert(payload)
-        .select(WORK_ITEM_COLUMNS)
-        .single();
+    try {
+        const item = await insertDoc("work_items", payload);
 
-    if (itemError) {
-        console.error("Failed to create work item:", itemError.message);
-        return NextResponse.json({ error: `Failed to create work item: ${itemError.message}` }, { status: 500 });
-    }
+        // Create assignments if provided
+        const assignments = Array.isArray(body?.assignments) ? body.assignments : [];
+        if (assignments.length > 0) {
+            const assignPayloads = assignments.map((a: { member_id: string; role_on_item?: string }) => ({
+                work_item_id: item.id,
+                member_id: a.member_id,
+                role_on_item: a.role_on_item || "assignee",
+                assigned_by: userId,
+                assigned_at: new Date().toISOString(),
+            }));
 
-    // Create assignments if provided
-    const assignments = Array.isArray(body?.assignments) ? body.assignments : [];
-    if (assignments.length > 0) {
-        const assignPayloads = assignments.map((a: { member_id: string; role_on_item?: string }) => ({
-            work_item_id: item.id,
-            member_id: a.member_id,
-            role_on_item: a.role_on_item || "assignee",
-            assigned_by: userId,
-        }));
+            await insertDocs("work_item_assignments", assignPayloads);
 
-        const { error: assignError } = await supabase
-            .from("work_item_assignments")
-            .insert(assignPayloads);
-
-        if (assignError) {
-            console.error("Failed to create assignments:", assignError.message);
-        } else {
-            // Phase 6.9: Log assignment notifications for each assignee
             for (const a of assignPayloads) {
                 await logActivity({
                     userId,
                     action: `Assigned ${a.role_on_item}`,
                     entityType: "work_item",
                     entityId: item.id,
-                    details: { target_name: item.title, assigned_member: a.member_id },
+                    details: { target_name: item.title as string, assigned_member: a.member_id },
                 });
             }
         }
+
+        await logActivity({
+            userId,
+            action: "Created",
+            entityType: "work_item",
+            entityId: item.id,
+            details: { target_name: item.title as string },
+        });
+
+        return NextResponse.json({ work_item: serializeDoc(item) }, { status: 201 });
+    } catch (error) {
+        console.error("Failed to create work item:", error);
+        return NextResponse.json({ error: "Failed to create work item" }, { status: 500 });
     }
-
-    await logActivity({
-        userId,
-        action: "Created",
-        entityType: "work_item",
-        entityId: item.id,
-        details: { target_name: item.title },
-    });
-
-    return NextResponse.json({ work_item: item }, { status: 201 });
 }
 
 // PATCH: update a work item
@@ -197,24 +204,17 @@ export async function PATCH(req: Request) {
     if (body?.due_date !== undefined) updates.due_date = normalizeDate(body.due_date);
     if (body?.sort_order !== undefined) updates.sort_order = normalizeNumber(body.sort_order);
 
-    if (Object.keys(updates).length === 0) {
+    if (Object.keys(updates).length === 0)
         return NextResponse.json({ error: "No fields provided" }, { status: 400 });
-    }
 
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-        .from("project_work_items")
-        .update(updates)
-        .eq("id", id)
-        .select(WORK_ITEM_COLUMNS)
-        .single();
-
-    if (error) {
-        console.error("Failed to update work item:", error.message);
+    try {
+        const data = await updateDoc("work_items", id, updates);
+        if (!data) return NextResponse.json({ error: "Work item not found" }, { status: 404 });
+        return NextResponse.json({ work_item: serializeDoc(data) });
+    } catch (error) {
+        console.error("Failed to update work item:", error);
         return NextResponse.json({ error: "Failed to update work item" }, { status: 500 });
     }
-
-    return NextResponse.json({ work_item: data });
 }
 
 // DELETE: remove a work item
@@ -226,26 +226,33 @@ export async function DELETE(req: Request) {
     const id = normalizeText(body?.id);
     if (!id) return NextResponse.json({ error: "Work item id is required" }, { status: 400 });
 
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-        .from("project_work_items")
-        .delete()
-        .eq("id", id)
-        .select("id,title,project_id")
-        .single();
+    try {
+        const item = await getDoc("work_items", id);
+        if (!item) return NextResponse.json({ error: "Work item not found" }, { status: 404 });
 
-    if (error) {
-        console.error("Failed to delete work item:", error.message);
+        // Clean up related data
+        await deleteDocs("work_item_assignments", [{ field: "work_item_id", op: "==", value: id }]);
+        await deleteDocs("work_item_status_log", [{ field: "work_item_id", op: "==", value: id }]);
+
+        await deleteDoc("work_items", id);
+
+        // Recompute project progress
+        if (item.project_id) {
+            const { computeProjectProgress } = await import("@/lib/firebase/queries");
+            await computeProjectProgress(item.project_id as string);
+        }
+
+        await logActivity({
+            userId,
+            action: "Deleted",
+            entityType: "work_item",
+            entityId: id,
+            details: { target_name: item.title as string },
+        });
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("Failed to delete work item:", error);
         return NextResponse.json({ error: "Failed to delete work item" }, { status: 500 });
     }
-
-    await logActivity({
-        userId,
-        action: "Deleted",
-        entityType: "work_item",
-        entityId: data.id,
-        details: { target_name: data.title },
-    });
-
-    return NextResponse.json({ success: true });
 }

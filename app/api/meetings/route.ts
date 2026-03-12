@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { queryDocs, getDoc, insertDoc, updateDoc, deleteDoc, serializeDoc } from "@/lib/firebase/db";
 import { logActivity } from "@/lib/activity-log";
-
-const MEETING_COLUMNS =
-  "id,client_id,project_id,title,scheduled_at,duration_minutes,platform,meeting_url,agenda,status,created_at,clients(company_name),projects(project_name)";
 
 function normalizeText(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -24,22 +21,34 @@ function normalizeInt(value: unknown): number | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
+async function enrichMeeting(doc: Record<string, unknown>) {
+  if (doc.client_id && !doc.client_name) {
+    const client = await getDoc("clients", doc.client_id as string);
+    if (client) doc.client_name = client.company_name;
+  }
+  if (doc.project_id && !doc.project_name) {
+    const project = await getDoc("projects", doc.project_id as string);
+    if (project) doc.project_name = project.project_name;
+  }
+  return {
+    ...doc,
+    clients: doc.client_name ? { company_name: doc.client_name } : null,
+    projects: doc.project_name ? { project_name: doc.project_name } : null,
+  };
+}
+
 export async function GET() {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("meetings")
-    .select(MEETING_COLUMNS)
-    .order("scheduled_at", { ascending: true });
-
-  if (error) {
-    console.error("Failed to fetch meetings:", error.message);
+  try {
+    const data = await queryDocs("meetings", [], [{ field: "scheduled_at", direction: "asc" }]);
+    const enriched = await Promise.all(data.map((d) => enrichMeeting(serializeDoc(d))));
+    return NextResponse.json({ meetings: enriched });
+  } catch (error) {
+    console.error("Failed to fetch meetings:", error);
     return NextResponse.json({ error: "Failed to fetch meetings" }, { status: 500 });
   }
-
-  return NextResponse.json({ meetings: data ?? [] });
 }
 
 export async function POST(req: Request) {
@@ -55,15 +64,25 @@ export async function POST(req: Request) {
   if (!client_id) return NextResponse.json({ error: "Client is required" }, { status: 400 });
   if (!scheduled_at) return NextResponse.json({ error: "Valid date/time is required" }, { status: 400 });
 
+  // Denormalize names
+  let client_name: string | null = null;
+  const client = await getDoc("clients", client_id);
+  if (client) client_name = client.company_name as string;
+
   const payload: Record<string, unknown> = {
     title,
     client_id,
+    client_name,
     scheduled_at,
     status: "Scheduled",
   };
 
   const project_id = normalizeText(body?.project_id);
-  if (project_id) payload.project_id = project_id;
+  if (project_id) {
+    payload.project_id = project_id;
+    const project = await getDoc("projects", project_id);
+    if (project) payload.project_name = project.project_name;
+  }
   const duration = normalizeInt(body?.duration_minutes);
   if (duration) payload.duration_minutes = duration;
   const platform = normalizeText(body?.platform);
@@ -73,27 +92,23 @@ export async function POST(req: Request) {
   const agenda = normalizeText(body?.agenda);
   if (agenda) payload.agenda = agenda;
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("meetings")
-    .insert(payload)
-    .select(MEETING_COLUMNS)
-    .single();
+  try {
+    const data = await insertDoc("meetings", payload);
 
-  if (error) {
-    console.error("Failed to create meeting:", error.message);
-    return NextResponse.json({ error: `Failed to create meeting: ${error.message}` }, { status: 500 });
+    await logActivity({
+      userId,
+      action: "Scheduled",
+      entityType: "meeting",
+      entityId: data.id,
+      details: { target_name: data.title as string, status: data.status as string },
+    });
+
+    const enriched = await enrichMeeting(serializeDoc(data));
+    return NextResponse.json({ meeting: enriched }, { status: 201 });
+  } catch (error) {
+    console.error("Failed to create meeting:", error);
+    return NextResponse.json({ error: "Failed to create meeting" }, { status: 500 });
   }
-
-  await logActivity({
-    userId,
-    action: "Scheduled",
-    entityType: "meeting",
-    entityId: data.id,
-    details: { target_name: data.title, status: data.status },
-  });
-
-  return NextResponse.json({ meeting: data }, { status: 201 });
 }
 
 export async function PATCH(req: Request) {
@@ -116,28 +131,24 @@ export async function PATCH(req: Request) {
   if (Object.keys(updates).length === 0)
     return NextResponse.json({ error: "No fields provided" }, { status: 400 });
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("meetings")
-    .update(updates)
-    .eq("id", id)
-    .select(MEETING_COLUMNS)
-    .single();
+  try {
+    const data = await updateDoc("meetings", id, updates);
+    if (!data) return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
 
-  if (error) {
-    console.error("Failed to update meeting:", error.message);
+    await logActivity({
+      userId,
+      action: "Updated",
+      entityType: "meeting",
+      entityId: data.id,
+      details: { target_name: data.title as string, status: data.status as string },
+    });
+
+    const enriched = await enrichMeeting(serializeDoc(data));
+    return NextResponse.json({ meeting: enriched });
+  } catch (error) {
+    console.error("Failed to update meeting:", error);
     return NextResponse.json({ error: "Failed to update meeting" }, { status: 500 });
   }
-
-  await logActivity({
-    userId,
-    action: "Updated",
-    entityType: "meeting",
-    entityId: data.id,
-    details: { target_name: data.title, status: data.status },
-  });
-
-  return NextResponse.json({ meeting: data });
 }
 
 export async function DELETE(req: Request) {
@@ -148,26 +159,23 @@ export async function DELETE(req: Request) {
   const id = normalizeText(body?.id);
   if (!id) return NextResponse.json({ error: "Meeting id is required" }, { status: 400 });
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("meetings")
-    .delete()
-    .eq("id", id)
-    .select("id,title")
-    .single();
+  try {
+    const meeting = await getDoc("meetings", id);
+    if (!meeting) return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
 
-  if (error) {
-    console.error("Failed to delete meeting:", error.message);
+    await deleteDoc("meetings", id);
+
+    await logActivity({
+      userId,
+      action: "Deleted",
+      entityType: "meeting",
+      entityId: id,
+      details: { target_name: meeting.title as string },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete meeting:", error);
     return NextResponse.json({ error: "Failed to delete meeting" }, { status: 500 });
   }
-
-  await logActivity({
-    userId,
-    action: "Deleted",
-    entityType: "meeting",
-    entityId: data.id,
-    details: { target_name: data.title },
-  });
-
-  return NextResponse.json({ success: true });
 }

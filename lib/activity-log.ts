@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { insertDoc } from "@/lib/firebase/db";
 
 type ActivityDetails = Record<string, unknown>;
 
@@ -19,9 +19,6 @@ export async function logActivity({
 }: LogActivityInput) {
   if (!action || !entityType) return;
 
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
   const targetName =
     typeof details.target_name === "string" ? details.target_name.trim() : null;
 
@@ -29,36 +26,18 @@ export async function logActivity({
     ? `${action} ${entityType}: ${targetName}`
     : `${action} ${entityType}`;
 
-  const payload: {
-    action: string;
-    entity_type: string;
-    entity_id: string | null;
-    actor_id?: string;
-  } = {
+  const payload: Record<string, unknown> = {
     action: composedAction,
     entity_type: entityType,
-    entity_id:
-      typeof entityId === "string" && uuidRegex.test(entityId) ? entityId : null,
+    entity_id: entityId || null,
+    timestamp: new Date().toISOString(),
   };
 
+  if (userId) payload.actor_id = userId;
+
   try {
-    const supabase = createAdminClient();
-
-    if (userId) payload.actor_id = userId;
-
-    let { error } = await supabase.from("activity_logs").insert(payload);
-
-    // If the Clerk user is not synced in `users`, retry without actor_id so activity is still recorded.
-    if (error?.code === "23503" && payload.actor_id) {
-      delete payload.actor_id;
-      const fallback = await supabase.from("activity_logs").insert(payload);
-      error = fallback.error;
-    }
-
-    if (error) {
-      console.error("Failed to write activity log:", error.code, error.message);
-    }
+    await insertDoc("activity_logs", payload);
   } catch (error) {
-    console.error("Unexpected activity log failure:", error);
+    console.error("Failed to write activity log:", error);
   }
 }

@@ -92,7 +92,9 @@ export const columns: ColumnDef<Payment>[] = [
       );
     },
     cell: ({ row }) => {
-       const date = new Date(row.getValue("payment_date"));
+       const raw = row.getValue("payment_date") as string;
+       if (!raw) return <div className="text-muted-foreground">—</div>;
+       const date = new Date(raw);
        return <div className="text-muted-foreground">{format(date, "MMM d, yyyy")}</div>;
     },
   },

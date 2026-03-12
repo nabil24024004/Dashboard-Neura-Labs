@@ -1,6 +1,7 @@
 import { Sidebar, MobileSidebar } from "@/components/dashboard/sidebar/sidebar";
 import { SidebarProvider } from "@/components/dashboard/sidebar/sidebar-context";
 import { Topbar } from "@/components/dashboard/topbar/topbar";
+import { AutoRefresh } from "@/components/dashboard/auto-refresh";
 
 export default function DashboardLayout({
   children,
@@ -9,6 +10,7 @@ export default function DashboardLayout({
 }) {
   return (
     <SidebarProvider>
+      <AutoRefresh />
       <div className="flex h-screen overflow-hidden bg-background text-foreground">
         <Sidebar />
         <MobileSidebar />

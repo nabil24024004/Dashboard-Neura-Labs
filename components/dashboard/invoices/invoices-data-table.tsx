@@ -19,6 +19,7 @@ import {
 import { Search, Plus, Loader2, FileText, MoreHorizontal } from "lucide-react";
 import { format } from "date-fns";
 import { Invoice } from "./invoices-columns";
+import { getEffectiveInvoiceStatus, type InvoiceSnapshot } from "@/lib/invoices/metrics";
 
 /* ─── helpers ─── */
 type Client = { id: string; company_name: string };
@@ -219,8 +220,22 @@ export function InvoicesDataTable({ columns, data: initialData }: InvoicesDataTa
       if (!res.ok) { setPayError(payload?.error ?? "Failed to record payment"); return; }
       // Refresh invoice status optimistically
       const paidAmt = Number(payForm.amount);
-      const newStatus: Invoice["status"] = paidAmt >= payingInvoice.amount ? "Paid" : "Partial";
-      setInvoices((prev) => prev.map((inv) => inv.id === payingInvoice.id ? { ...inv, status: newStatus } : inv));
+      const nextStoredStatus: Invoice["status"] = paidAmt >= payingInvoice.amount ? "Paid" : "Partial";
+      const nextEffectiveStatus = getEffectiveInvoiceStatus(
+        {
+          id: payingInvoice.id,
+          amount: payingInvoice.amount,
+          status: nextStoredStatus,
+          due_date: payingInvoice.due_date,
+          issue_date: payingInvoice.issue_date,
+        } satisfies InvoiceSnapshot,
+        new Date()
+      );
+      setInvoices((prev) =>
+        prev.map((inv) =>
+          inv.id === payingInvoice.id ? { ...inv, status: nextEffectiveStatus } : inv
+        )
+      );
       setPayForm(EMPTY_PAY);
       setPayingInvoice(null);
     });
@@ -231,7 +246,25 @@ export function InvoicesDataTable({ columns, data: initialData }: InvoicesDataTa
       const res = await fetch("/api/invoices", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status }) });
       const payload = await res.json().catch(() => null);
       if (res.ok && payload?.invoice) {
-        setInvoices((prev) => prev.map((inv) => inv.id === id ? { ...inv, status } : inv));
+        setInvoices((prev) =>
+          prev.map((inv) =>
+            inv.id === id
+              ? {
+                  ...inv,
+                  status: getEffectiveInvoiceStatus(
+                    {
+                      id: inv.id,
+                      amount: inv.amount,
+                      status,
+                      due_date: inv.due_date,
+                      issue_date: inv.issue_date,
+                    } satisfies InvoiceSnapshot,
+                    new Date()
+                  ),
+                }
+              : inv
+          )
+        );
       }
     });
   }

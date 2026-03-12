@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getDoc, updateDoc, deleteDoc, deleteDocs, serializeDoc } from "@/lib/firebase/db";
+import { deleteFromR2, getR2KeyFromUrl } from "@/lib/r2/client";
 import { logActivity } from "@/lib/activity-log";
 
 export const dynamic = "force-dynamic";
-
-const CONTRACT_COLUMNS =
-  "id,contract_type,title,client_name,client_email,field_values,pdf_url,share_token,status,created_by,created_at,updated_at,expires_at";
 
 function toText(v: unknown): string | null {
   if (typeof v !== "string") return null;
@@ -14,52 +12,32 @@ function toText(v: unknown): string | null {
   return t.length ? t : null;
 }
 
-function getStorageTargetFromPublicUrl(url: string) {
-  try {
-    const path = new URL(url).pathname;
-    const match = path.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
-    if (!match) return null;
-    return {
-      bucket: match[1],
-      objectPath: decodeURIComponent(match[2]),
-    };
-  } catch {
-    return null;
-  }
-}
-
 type Params = { params: Promise<{ id: string }> };
 
 // ─── GET — single contract ──────────────────────────────────────────
 export async function GET(_req: Request, { params }: Params) {
   const { userId } = await auth();
-  if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("contracts")
-    .select(CONTRACT_COLUMNS)
-    .eq("id", id)
-    .single();
 
-  if (error || !data)
+  try {
+    const data = await getDoc("contracts", id);
+    if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ contract: serializeDoc(data) });
+  } catch (error) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  return NextResponse.json({ contract: data });
+  }
 }
 
 // ─── PATCH — update status, pdf_url, etc. ───────────────────────────
 export async function PATCH(req: Request, { params }: Params) {
   const { userId } = await auth();
-  if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
   const body = await req.json().catch(() => null);
-  if (!body)
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  if (!body) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
 
   const updates: Record<string, unknown> = {};
 
@@ -74,8 +52,7 @@ export async function PATCH(req: Request, { params }: Params) {
   }
 
   if (body.pdf_url !== undefined) updates.pdf_url = toText(body.pdf_url);
-  if (body.client_email !== undefined)
-    updates.client_email = toText(body.client_email);
+  if (body.client_email !== undefined) updates.client_email = toText(body.client_email);
   if (body.title !== undefined) updates.title = toText(body.title);
   if (body.expires_at !== undefined) updates.expires_at = body.expires_at;
   if (body.field_values !== undefined) updates.field_values = body.field_values;
@@ -85,98 +62,53 @@ export async function PATCH(req: Request, { params }: Params) {
 
   updates.updated_at = new Date().toISOString();
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("contracts")
-    .update(updates)
-    .eq("id", id)
-    .select(CONTRACT_COLUMNS)
-    .single();
+  try {
+    const data = await updateDoc("contracts", id, updates);
+    if (!data) return NextResponse.json({ error: "Contract not found" }, { status: 404 });
 
-  if (error)
-    return NextResponse.json(
-      { error: `Failed to update: ${error.message}` },
-      { status: 500 }
-    );
+    await logActivity({
+      userId, action: "Updated", entityType: "contract", entityId: data.id,
+      details: { target_name: data.title as string, status: data.status as string },
+    });
 
-  await logActivity({
-    userId,
-    action: "Updated",
-    entityType: "contract",
-    entityId: data.id,
-    details: { target_name: data.title, status: data.status },
-  });
-
-  return NextResponse.json({ contract: data });
+    return NextResponse.json({ contract: serializeDoc(data) });
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to update" }, { status: 500 });
+  }
 }
 
 // ─── DELETE — hard delete contract + stored PDF ─────────────────────
 export async function DELETE(_req: Request, { params }: Params) {
   const { userId } = await auth();
-  if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const supabase = createAdminClient();
 
-  const { data: contract, error: fetchError } = await supabase
-    .from("contracts")
-    .select("id,title,pdf_url")
-    .eq("id", id)
-    .single();
+  try {
+    const contract = await getDoc("contracts", id);
+    if (!contract) return NextResponse.json({ error: "Contract not found" }, { status: 404 });
 
-  if (fetchError || !contract)
-    return NextResponse.json({ error: "Contract not found" }, { status: 404 });
-
-  const pdfUrl = toText(contract.pdf_url);
-  if (pdfUrl) {
-    const storageTarget = getStorageTargetFromPublicUrl(pdfUrl);
-    if (storageTarget) {
-      const { error: storageError } = await supabase.storage
-        .from(storageTarget.bucket)
-        .remove([storageTarget.objectPath]);
-
-      if (storageError) {
-        return NextResponse.json(
-          {
-            error: `Failed to delete PDF from storage: ${storageError.message}`,
-          },
-          { status: 500 }
-        );
+    // Delete PDF from R2 if it exists
+    const pdfUrl = toText(contract.pdf_url);
+    if (pdfUrl) {
+      const r2Key = getR2KeyFromUrl(pdfUrl);
+      if (r2Key) {
+        try { await deleteFromR2(r2Key); } catch (e) { console.error("R2 PDF delete error:", e); }
       }
+
+      // Delete related file records
+      await deleteDocs("files", [{ field: "file_url", op: "==", value: pdfUrl }]);
     }
 
-    const { error: filesDeleteError } = await supabase
-      .from("files")
-      .delete()
-      .eq("file_url", pdfUrl);
+    await deleteDoc("contracts", id);
 
-    if (filesDeleteError) {
-      console.error(
-        "Failed to delete related files rows:",
-        filesDeleteError.message
-      );
-    }
+    await logActivity({
+      userId, action: "Deleted", entityType: "contract", entityId: id,
+      details: { target_name: contract.title as string },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to delete contract" }, { status: 500 });
   }
-
-  const { error: deleteError } = await supabase
-    .from("contracts")
-    .delete()
-    .eq("id", id);
-
-  if (deleteError)
-    return NextResponse.json(
-      { error: `Failed to delete contract: ${deleteError.message}` },
-      { status: 500 }
-    );
-
-  await logActivity({
-    userId,
-    action: "Deleted",
-    entityType: "contract",
-    entityId: contract.id,
-    details: { target_name: contract.title },
-  });
-
-  return NextResponse.json({ success: true });
 }

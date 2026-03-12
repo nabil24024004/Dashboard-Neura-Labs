@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { queryDocs, insertDoc, updateDoc, deleteDoc, serializeDoc } from "@/lib/firebase/db";
 import { logActivity } from "@/lib/activity-log";
-
-const CLIENT_COLUMNS = "id,company_name,contact_person,email,phone,country,status,notes,created_at";
 
 function normalizeText(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -16,23 +14,33 @@ function normalizeStatus(value: unknown): "Active" | "Inactive" | "Lead" {
   return "Lead";
 }
 
+const CLIENT_FIELDS = ["id", "company_name", "contact_person", "email", "phone", "country", "status", "notes", "created_at"];
+
+function pickFields(doc: Record<string, unknown>) {
+  const result: Record<string, unknown> = {};
+  for (const key of CLIENT_FIELDS) {
+    if (key in doc) result[key] = doc[key];
+  }
+  return result;
+}
+
 export async function GET() {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("clients")
-    .select(CLIENT_COLUMNS)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
+  try {
+    const data = await queryDocs(
+      "clients",
+      [{ field: "deleted_at", op: "==", value: null }]
+    );
 
-  if (error) {
-    console.error("Failed to fetch clients:", error.message);
+    const sortedData = data.sort((a, b) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime());
+
+    return NextResponse.json({ clients: sortedData.map((d) => pickFields(serializeDoc(d))) });
+  } catch (error) {
+    console.error("Failed to fetch clients:", error);
     return NextResponse.json({ error: "Failed to fetch clients" }, { status: 500 });
   }
-
-  return NextResponse.json({ clients: data ?? [] });
 }
 
 export async function POST(req: Request) {
@@ -46,10 +54,8 @@ export async function POST(req: Request) {
   if (!company_name) return NextResponse.json({ error: "Company name is required" }, { status: 400 });
   if (!contact_person) return NextResponse.json({ error: "Contact person is required" }, { status: 400 });
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("clients")
-    .insert({
+  try {
+    const data = await insertDoc("clients", {
       company_name,
       contact_person,
       email: normalizeText(body?.email),
@@ -57,24 +63,22 @@ export async function POST(req: Request) {
       country: normalizeText(body?.country),
       status: normalizeStatus(body?.status),
       notes: normalizeText(body?.notes),
-    })
-    .select(CLIENT_COLUMNS)
-    .single();
+      deleted_at: null,
+    });
 
-  if (error) {
-    console.error("Failed to create client:", error.message);
-    return NextResponse.json({ error: `Failed to create client: ${error.message}` }, { status: 500 });
+    await logActivity({
+      userId,
+      action: "Created",
+      entityType: "client",
+      entityId: data.id,
+      details: { target_name: data.company_name as string },
+    });
+
+    return NextResponse.json({ client: pickFields(serializeDoc(data)) }, { status: 201 });
+  } catch (error) {
+    console.error("Failed to create client:", error);
+    return NextResponse.json({ error: "Failed to create client" }, { status: 500 });
   }
-
-  await logActivity({
-    userId,
-    action: "Created",
-    entityType: "client",
-    entityId: data.id,
-    details: { target_name: data.company_name },
-  });
-
-  return NextResponse.json({ client: data }, { status: 201 });
 }
 
 export async function PATCH(req: Request) {
@@ -97,28 +101,23 @@ export async function PATCH(req: Request) {
   if (Object.keys(updates).length === 0)
     return NextResponse.json({ error: "No fields provided" }, { status: 400 });
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("clients")
-    .update(updates)
-    .eq("id", id)
-    .select(CLIENT_COLUMNS)
-    .single();
+  try {
+    const data = await updateDoc("clients", id, updates);
+    if (!data) return NextResponse.json({ error: "Client not found" }, { status: 404 });
 
-  if (error) {
-    console.error("Failed to update client:", error.message);
+    await logActivity({
+      userId,
+      action: "Updated",
+      entityType: "client",
+      entityId: data.id,
+      details: { target_name: data.company_name as string },
+    });
+
+    return NextResponse.json({ client: pickFields(serializeDoc(data)) });
+  } catch (error) {
+    console.error("Failed to update client:", error);
     return NextResponse.json({ error: "Failed to update client" }, { status: 500 });
   }
-
-  await logActivity({
-    userId,
-    action: "Updated",
-    entityType: "client",
-    entityId: data.id,
-    details: { target_name: data.company_name },
-  });
-
-  return NextResponse.json({ client: data });
 }
 
 export async function DELETE(req: Request) {
@@ -129,27 +128,22 @@ export async function DELETE(req: Request) {
   const id = normalizeText(body?.id);
   if (!id) return NextResponse.json({ error: "Client id is required" }, { status: 400 });
 
-  // Soft delete
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("clients")
-    .update({ deleted_at: new Date().toISOString() })
-    .eq("id", id)
-    .select("id,company_name")
-    .single();
+  try {
+    // Soft delete
+    const data = await updateDoc("clients", id, { deleted_at: new Date().toISOString() });
+    if (!data) return NextResponse.json({ error: "Client not found" }, { status: 404 });
 
-  if (error) {
-    console.error("Failed to delete client:", error.message);
+    await logActivity({
+      userId,
+      action: "Archived",
+      entityType: "client",
+      entityId: data.id,
+      details: { target_name: data.company_name as string },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete client:", error);
     return NextResponse.json({ error: "Failed to delete client" }, { status: 500 });
   }
-
-  await logActivity({
-    userId,
-    action: "Archived",
-    entityType: "client",
-    entityId: data.id,
-    details: { target_name: data.company_name },
-  });
-
-  return NextResponse.json({ success: true });
 }

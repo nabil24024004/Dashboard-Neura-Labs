@@ -1,91 +1,69 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getDoc, updateDoc, insertDoc, serializeDoc } from "@/lib/firebase/db";
+import { computeProjectProgress } from "@/lib/firebase/queries";
 import { logActivity } from "@/lib/activity-log";
 
-const VALID_TRANSITIONS: Record<string, string[]> = {
-    not_started: ["in_progress"],
-    in_progress: ["in_review"],
-    in_review: ["done", "in_progress"],
-    done: ["in_progress"],
-};
+function normalizeText(value: unknown): string | null {
+    if (typeof value !== "string") return null;
+    const t = value.trim();
+    return t.length > 0 ? t : null;
+}
 
+const VALID_STATUSES = new Set(["not_started", "in_progress", "in_review", "done", "blocked"]);
+
+// PATCH — update the status of a work item and log it
 export async function PATCH(req: Request) {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json().catch(() => null);
-    const workItemId = body?.work_item_id;
-    const newStatus = body?.status;
-    const note = typeof body?.note === "string" ? body.note.trim() : null;
+    const id = normalizeText(body?.id);
+    const newStatus = normalizeText(body?.status);
 
-    if (!workItemId || !newStatus) {
-        return NextResponse.json({ error: "work_item_id and status are required" }, { status: 400 });
-    }
+    if (!id) return NextResponse.json({ error: "Work item id is required" }, { status: 400 });
+    if (!newStatus || !VALID_STATUSES.has(newStatus))
+        return NextResponse.json({ error: `Invalid status. Must be one of: ${[...VALID_STATUSES].join(", ")}` }, { status: 400 });
 
-    const supabase = createAdminClient();
+    try {
+        const existing = await getDoc("work_items", id);
+        if (!existing)
+            return NextResponse.json({ error: "Work item not found" }, { status: 404 });
 
-    // Get current work item
-    const { data: item, error: fetchError } = await supabase
-        .from("project_work_items")
-        .select("id,title,status,project_id")
-        .eq("id", workItemId)
-        .single();
+        const previousStatus = (existing.status as string) || "not_started";
 
-    if (fetchError || !item) {
-        return NextResponse.json({ error: "Work item not found" }, { status: 404 });
-    }
+        // Update work item status
+        const data = await updateDoc("work_items", id, { status: newStatus });
 
-    const currentStatus = item.status;
+        // Log the status change
+        await insertDoc("work_item_status_log", {
+            work_item_id: id,
+            previous_status: previousStatus,
+            new_status: newStatus,
+            changed_by: userId,
+            changed_at: new Date().toISOString(),
+        });
 
-    // Validate transition
-    const allowed = VALID_TRANSITIONS[currentStatus];
-    if (!allowed || !allowed.includes(newStatus)) {
-        return NextResponse.json(
-            { error: `Invalid transition: ${currentStatus} → ${newStatus}` },
-            { status: 400 }
-        );
-    }
+        // Recompute project progress (replaces Postgres trigger)
+        if (existing.project_id) {
+            await computeProjectProgress(existing.project_id as string);
+        }
 
-    // Update status
-    const { data: updated, error: updateError } = await supabase
-        .from("project_work_items")
-        .update({ status: newStatus })
-        .eq("id", workItemId)
-        .select("id,title,status,project_id")
-        .single();
+        await logActivity({
+            userId,
+            action: "Updated status",
+            entityType: "work_item",
+            entityId: id,
+            details: {
+                target_name: existing.title as string,
+                from: previousStatus,
+                to: newStatus,
+            },
+        });
 
-    if (updateError) {
-        console.error("Failed to update work item status:", updateError.message);
+        return NextResponse.json({ work_item: serializeDoc(data!) });
+    } catch (error) {
+        console.error("Failed to update work item status:", error);
         return NextResponse.json({ error: "Failed to update status" }, { status: 500 });
     }
-
-    // Log the status change
-    await supabase.from("work_item_status_log").insert({
-        work_item_id: workItemId,
-        changed_by: userId,
-        from_status: currentStatus,
-        to_status: newStatus,
-        note: note || null,
-    });
-
-    await logActivity({
-        userId,
-        action: `Status changed to ${newStatus}`,
-        entityType: "work_item",
-        entityId: updated.id,
-        details: { target_name: updated.title, from_status: currentStatus, to_status: newStatus },
-    });
-
-    // Fetch updated project progress
-    const { data: project } = await supabase
-        .from("projects")
-        .select("id,progress")
-        .eq("id", updated.project_id)
-        .single();
-
-    return NextResponse.json({
-        work_item: updated,
-        project_progress: project?.progress ?? null,
-    });
 }

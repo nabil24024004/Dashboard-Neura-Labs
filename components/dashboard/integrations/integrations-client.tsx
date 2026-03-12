@@ -59,6 +59,7 @@ interface IntegrationsClientProps {
 
 export function IntegrationsClient({ initialIntegrations, initialLoadError = null }: IntegrationsClientProps) {
   const [integrations, setIntegrations] = useState<Integration[]>(initialIntegrations);
+  const [renderedAt] = useState(() => Date.now());
   const [isPending, startTransition] = useTransition();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [manageDialogOpen, setManageDialogOpen] = useState<string | null>(null);
@@ -212,7 +213,7 @@ export function IntegrationsClient({ initialIntegrations, initialLoadError = nul
   };
 
   const formatTimeAgo = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
+    const diff = renderedAt - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return "Just now";
     if (mins < 60) return `${mins}m ago`;

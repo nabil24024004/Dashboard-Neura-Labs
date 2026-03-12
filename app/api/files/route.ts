@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { queryDocs, getDoc, insertDoc, deleteDoc, serializeDoc } from "@/lib/firebase/db";
+import { deleteFromR2, getR2KeyFromUrl } from "@/lib/r2/client";
 import { logActivity } from "@/lib/activity-log";
-
-const FILE_COLUMNS =
-  "id,client_id,project_id,file_name,file_url,file_type,file_size,uploaded_by,description,version,created_at,clients(company_name),projects(project_name)";
 
 function normalizeText(v: unknown): string | null {
   if (typeof v !== "string") return null;
@@ -12,22 +10,34 @@ function normalizeText(v: unknown): string | null {
   return t.length ? t : null;
 }
 
+async function enrichFile(doc: Record<string, unknown>) {
+  if (doc.client_id && !doc.client_name) {
+    const client = await getDoc("clients", doc.client_id as string);
+    if (client) doc.client_name = client.company_name;
+  }
+  if (doc.project_id && !doc.project_name) {
+    const project = await getDoc("projects", doc.project_id as string);
+    if (project) doc.project_name = project.project_name;
+  }
+  return {
+    ...doc,
+    clients: doc.client_name ? { company_name: doc.client_name } : null,
+    projects: doc.project_name ? { project_name: doc.project_name } : null,
+  };
+}
+
 export async function GET() {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("files")
-    .select(FILE_COLUMNS)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("Failed to fetch files:", error.message);
+  try {
+    const data = await queryDocs("files", [], [{ field: "created_at", direction: "desc" }]);
+    const enriched = await Promise.all(data.map((d) => enrichFile(serializeDoc(d))));
+    return NextResponse.json({ files: enriched });
+  } catch (error) {
+    console.error("Failed to fetch files:", error);
     return NextResponse.json({ error: "Failed to fetch files" }, { status: 500 });
   }
-
-  return NextResponse.json({ files: data ?? [] });
 }
 
 export async function POST(req: Request) {
@@ -39,23 +49,27 @@ export async function POST(req: Request) {
   const file_url = normalizeText(body?.file_url);
   const file_type = normalizeText(body?.file_type);
   const client_id = normalizeText(body?.client_id);
-  const client_name = normalizeText(body?.client_name);
+  const client_name_input = normalizeText(body?.client_name);
 
   if (!file_name || !file_url || !file_type)
     return NextResponse.json({ error: "file_name, file_url, and file_type are required" }, { status: 400 });
 
-  const supabase = createAdminClient();
-
   let resolvedClientId = client_id;
-  if (!resolvedClientId && client_name) {
-    const { data: matchedClient } = await supabase
-      .from("clients")
-      .select("id")
-      .eq("company_name", client_name)
-      .is("deleted_at", null)
-      .limit(1)
-      .maybeSingle();
-    resolvedClientId = matchedClient?.id ?? null;
+  let resolvedClientName: string | null = null;
+
+  // If client_name provided but no ID, look up the client
+  if (!resolvedClientId && client_name_input) {
+    const clients = await queryDocs("clients", [
+      { field: "company_name", op: "==", value: client_name_input },
+      { field: "deleted_at", op: "==", value: null },
+    ], [], 1);
+    if (clients.length > 0) {
+      resolvedClientId = clients[0].id;
+      resolvedClientName = clients[0].company_name as string;
+    }
+  } else if (resolvedClientId) {
+    const client = await getDoc("clients", resolvedClientId);
+    if (client) resolvedClientName = client.company_name as string;
   }
 
   const payload: Record<string, unknown> = {
@@ -65,28 +79,36 @@ export async function POST(req: Request) {
     file_size: Number(body?.file_size) || 0,
     uploaded_by: userId,
   };
-  if (resolvedClientId) payload.client_id = resolvedClientId;
+  if (resolvedClientId) {
+    payload.client_id = resolvedClientId;
+    payload.client_name = resolvedClientName;
+  }
   const project_id = normalizeText(body?.project_id);
-  if (project_id) payload.project_id = project_id;
+  if (project_id) {
+    payload.project_id = project_id;
+    const project = await getDoc("projects", project_id);
+    if (project) payload.project_name = project.project_name;
+  }
   const description = normalizeText(body?.description);
   if (description) payload.description = description;
 
-  const { data, error } = await supabase.from("files").insert(payload).select(FILE_COLUMNS).single();
+  try {
+    const data = await insertDoc("files", payload);
 
-  if (error) {
-    console.error("Failed to create file record:", error.message);
-    return NextResponse.json({ error: `Failed to save file: ${error.message}` }, { status: 500 });
+    await logActivity({
+      userId,
+      action: "Uploaded",
+      entityType: "file",
+      entityId: data.id,
+      details: { target_name: data.file_name as string, file_type: data.file_type },
+    });
+
+    const enriched = await enrichFile(serializeDoc(data));
+    return NextResponse.json({ file: enriched }, { status: 201 });
+  } catch (error) {
+    console.error("Failed to create file record:", error);
+    return NextResponse.json({ error: "Failed to save file" }, { status: 500 });
   }
-
-  await logActivity({
-    userId,
-    action: "Uploaded",
-    entityType: "file",
-    entityId: data.id,
-    details: { target_name: data.file_name, file_type: data.file_type },
-  });
-
-  return NextResponse.json({ file: data }, { status: 201 });
 }
 
 export async function DELETE(req: Request) {
@@ -97,36 +119,31 @@ export async function DELETE(req: Request) {
   const id = normalizeText(body?.id);
   if (!id) return NextResponse.json({ error: "File id required" }, { status: 400 });
 
-  const supabase = createAdminClient();
+  try {
+    const fileRec = await getDoc("files", id);
+    if (!fileRec) return NextResponse.json({ error: "File not found" }, { status: 404 });
 
-  // Get the file to extract the storage path
-  const { data: fileRec } = await supabase.from("files").select("file_url").eq("id", id).single();
-
-  if (fileRec?.file_url) {
-    // Attempt to remove from Supabase Storage (best-effort)
-    const url = fileRec.file_url as string;
-    const match = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
-    if (match) {
-      const [, bucket, path] = match;
-      await supabase.storage.from(bucket).remove([decodeURIComponent(path)]);
+    // Attempt to remove from R2 (best-effort)
+    if (fileRec.file_url) {
+      const r2Key = getR2KeyFromUrl(fileRec.file_url as string);
+      if (r2Key) {
+        try { await deleteFromR2(r2Key); } catch (e) { console.error("R2 delete error:", e); }
+      }
     }
+
+    await deleteDoc("files", id);
+
+    await logActivity({
+      userId,
+      action: "Deleted",
+      entityType: "file",
+      entityId: id,
+      details: { target_name: fileRec.file_name as string },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete file:", error);
+    return NextResponse.json({ error: "Failed to delete file" }, { status: 500 });
   }
-
-  const { data, error } = await supabase
-    .from("files")
-    .delete()
-    .eq("id", id)
-    .select("id,file_name")
-    .single();
-  if (error) return NextResponse.json({ error: "Failed to delete file" }, { status: 500 });
-
-  await logActivity({
-    userId,
-    action: "Deleted",
-    entityType: "file",
-    entityId: data.id,
-    details: { target_name: data.file_name },
-  });
-
-  return NextResponse.json({ success: true });
 }

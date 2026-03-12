@@ -1,65 +1,80 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { queryDocs, getDoc, serializeDoc } from "@/lib/firebase/db";
 import { PaymentsDataTable } from "@/components/dashboard/payments/payments-data-table";
 import { columns, Payment } from "@/components/dashboard/payments/payments-columns";
+import { summarizeInvoiceState, type InvoiceSnapshot } from "@/lib/invoices/metrics";
 
 export const dynamic = "force-dynamic";
 
 export default async function PaymentsPage() {
-  const supabase = createAdminClient();
+  const [rawPayments, allInvoices] = await Promise.all([
+    queryDocs("payments", [], [{ field: "created_at", direction: "desc" }]),
+    queryDocs("invoices"),
+  ]);
 
-  const { data: rawPayments, error } = await supabase
-    .from("payments")
-    .select("id,invoice_id,amount,payment_date,payment_method,notes,created_at,invoices(invoice_number,amount,clients(company_name))")
-    .order("payment_date", { ascending: false });
+  // Enrich payments with invoice + client info
+  const payments: Payment[] = await Promise.all(
+    rawPayments.map(async (pay) => {
+      const p = serializeDoc(pay);
+      let invoiceNumber = "—";
+      let clientName = "—";
+      if (p.invoice_id) {
+        const invoice = await getDoc("invoices", p.invoice_id as string);
+        if (invoice) {
+          invoiceNumber = (invoice.invoice_number as string) ?? "—";
+          if (invoice.client_id) {
+            const client = await getDoc("clients", invoice.client_id as string);
+            if (client) clientName = (client.company_name as string) ?? "—";
+          }
+        }
+      }
+      return {
+        id: p.id as string,
+        invoice_number: invoiceNumber,
+        client_name: clientName,
+        amount: Number(p.amount),
+        payment_date: typeof p.payment_date === "string" ? p.payment_date : "",
+        payment_method: (p.payment_method as string) ?? "—",
+        notes: (p.notes as string) ?? null,
+      };
+    })
+  );
 
-  const safePaymentsRows = error ? [] : (rawPayments ?? []);
+  const invoiceState = summarizeInvoiceState(
+    allInvoices.map((invoice) => ({
+      id: invoice.id,
+      amount: Number(invoice.amount) || 0,
+      status: invoice.status as InvoiceSnapshot["status"],
+      due_date: (invoice.due_date as string | null) ?? null,
+      issue_date: (invoice.issue_date as string | null) ?? null,
+      created_at: (invoice.created_at as string | null) ?? null,
+    })),
+    new Date()
+  );
 
-  const payments: Payment[] = safePaymentsRows.map((pay: any) => ({
-    id: pay.id,
-    invoice_number: pay.invoices?.invoice_number ?? "—",
-    client_name: (pay.invoices as any)?.clients?.company_name ?? "—",
-    amount: Number(pay.amount),
-    payment_date: pay.payment_date,
-    payment_method: pay.payment_method ?? "—",
-    notes: pay.notes ?? null,
-  }));
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const totalReceived30d = rawPayments.reduce((sum, payment) => {
+    const rawDate = (payment.payment_date as string | null) ?? (payment.created_at as string | null);
+    if (!rawDate) return sum;
+    const parsed = new Date(rawDate);
+    if (Number.isNaN(parsed.getTime()) || parsed < thirtyDaysAgo) return sum;
+    return sum + Number(payment.amount);
+  }, 0);
+  const outstandingBalance = invoiceState.openInvoiceAmount;
 
-  // ── Real stats ──
-  const thirtyDaysAgo = new Date(Date.now() - 86400000 * 30).toISOString().split("T")[0];
-
-  // Total received in last 30 days
-  const totalReceived30d = safePaymentsRows
-    .filter((p: any) => p.payment_date >= thirtyDaysAgo)
-    .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
-
-  // Outstanding balance: sum of pending/overdue/partial invoice amounts
-  const { data: openInvoices } = await supabase
-    .from("invoices")
-    .select("amount")
-    .in("status", ["Pending", "Overdue", "Partial"]);
-
-  const outstandingBalance = (openInvoices ?? []).reduce((sum, inv) => sum + Number(inv.amount), 0);
-
-  // Avg days to pay: for Paid invoices, payment_date - issue_date
-  const { data: paidInvoices } = await supabase
-    .from("invoices")
-    .select("issue_date,id")
-    .eq("status", "Paid");
-
+  const paidInvoices = allInvoices.filter((inv) => inv.status === "Paid");
   let avgDaysToPay = 0;
-  if (paidInvoices && paidInvoices.length > 0) {
-    const invoiceIds = paidInvoices.map((i) => i.id);
-    const { data: matchedPayments } = await supabase
-      .from("payments")
-      .select("invoice_id,payment_date")
-      .in("invoice_id", invoiceIds);
-
-    const issueMap = Object.fromEntries((paidInvoices ?? []).map((i) => [i.id, i.issue_date]));
+  if (paidInvoices.length > 0) {
+    const paidInvoiceIds = paidInvoices.map((i) => i.id);
+    const matchedPayments = rawPayments.filter((p) => paidInvoiceIds.includes(p.invoice_id as string));
+    const issueMap = Object.fromEntries(paidInvoices.map((i) => [i.id, i.issue_date]));
     const daysArr: number[] = [];
-    (matchedPayments ?? []).forEach((p: any) => {
-      const issueDate = issueMap[p.invoice_id];
+    matchedPayments.forEach((p) => {
+      const issueDate = issueMap[p.invoice_id as string];
       if (issueDate && p.payment_date) {
-        const diff = Math.round((new Date(p.payment_date).getTime() - new Date(issueDate).getTime()) / 86400000);
+        const diff = Math.round(
+          (new Date(p.payment_date as string).getTime() - new Date(issueDate as string).getTime()) / 86400000
+        );
         if (diff >= 0) daysArr.push(diff);
       }
     });

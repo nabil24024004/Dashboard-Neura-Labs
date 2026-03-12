@@ -1,19 +1,18 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { queryDocs, serializeDoc } from "@/lib/firebase/db";
 import { ActivityTimeline, ActivityLog } from "@/components/dashboard/activity/activity-timeline";
 import { Clock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function ActivityPage() {
-  const supabase = createAdminClient();
+  const data = await queryDocs(
+    "activity_logs",
+    [],
+    [{ field: "timestamp", direction: "desc" }],
+    50
+  );
 
-  const { data: dbActivities, error } = await supabase
-    .from("activity_logs")
-    .select("id, actor_id, action, entity_type, entity_id, timestamp")
-    .order("timestamp", { ascending: false })
-    .limit(50);
-
-  const activities = (error ? [] : (dbActivities ?? [])) as ActivityLog[];
+  const activities = data.map(serializeDoc) as ActivityLog[];
 
   return (
     <div className="flex flex-col gap-6 h-full max-w-4xl">

@@ -43,6 +43,78 @@ interface SearchResult {
   href: string;
 }
 
+interface ClientLink {
+  company_name?: string;
+}
+
+interface HasClientsRelation {
+  clients?: ClientLink | ClientLink[];
+}
+
+interface ClientSearchRow {
+  id: string;
+  company_name?: string;
+  contact_person?: string;
+  email?: string;
+  country?: string;
+}
+
+interface ProjectSearchRow extends HasClientsRelation {
+  id: string;
+  project_name?: string;
+  service_type?: string;
+  status?: string;
+}
+
+interface InvoiceSearchRow extends HasClientsRelation {
+  id: string;
+  invoice_number?: string;
+  status?: string;
+  amount?: number | string | null;
+}
+
+interface MeetingSearchRow extends HasClientsRelation {
+  id: string;
+  title?: string;
+  platform?: string;
+  agenda?: string;
+}
+
+interface InvoiceRelation extends HasClientsRelation {
+  invoice_number?: string;
+}
+
+interface PaymentSearchRow {
+  id: string;
+  amount?: number | string | null;
+  payment_method?: string;
+  notes?: string;
+  invoices?: InvoiceRelation | InvoiceRelation[];
+}
+
+interface AgreementSearchRow extends HasClientsRelation {
+  id: string;
+  type?: string;
+  status?: string;
+  notes?: string;
+}
+
+interface FileSearchRow extends HasClientsRelation {
+  id: string;
+  file_name?: string;
+  description?: string;
+  file_type?: string;
+}
+
+interface TaskSearchRow {
+  id: string;
+  title?: string;
+  description?: string;
+  status?: string;
+  priority?: string;
+  assigned_to?: string;
+}
+
 const navigationItems = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "Clients", href: "/dashboard/clients", icon: Users },
@@ -88,21 +160,20 @@ const typeLabels: Record<string, string> = {
   task: "Task",
 };
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-function extractClientName(row: any): string {
+function extractClientName(row: HasClientsRelation): string {
   if (!row.clients) return "";
   if (Array.isArray(row.clients)) return row.clients[0]?.company_name ?? "";
   return row.clients.company_name ?? "";
 }
 
-function extractInvoiceInfo(row: any): { number: string; clientName: string } {
+function extractInvoiceInfo(row: PaymentSearchRow): { number: string; clientName: string } {
   const inv = row.invoices;
   if (!inv) return { number: "", clientName: "" };
   if (Array.isArray(inv)) {
     const i = inv[0];
     return {
       number: i?.invoice_number ?? "",
-      clientName: extractClientName(i ?? {}),
+      clientName: i ? extractClientName(i) : "",
     };
   }
   return {
@@ -110,7 +181,6 @@ function extractInvoiceInfo(row: any): { number: string; clientName: string } {
     clientName: extractClientName(inv),
   };
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 async function fetchJSON(url: string): Promise<Record<string, unknown>> {
   try {
@@ -182,7 +252,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       const MAX_TOTAL = 20;
 
       // --- Clients ---
-      const clients = (clientsData.clients ?? []) as Record<string, any>[];
+      const clients = (clientsData.clients ?? []) as ClientSearchRow[];
       let count = 0;
       for (const c of clients) {
         if (count >= MAX_PER_TYPE || results.length >= MAX_TOTAL) break;
@@ -204,7 +274,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       }
 
       // --- Projects ---
-      const projects = (projectsData.projects ?? []) as Record<string, any>[];
+      const projects = (projectsData.projects ?? []) as ProjectSearchRow[];
       count = 0;
       for (const p of projects) {
         if (count >= MAX_PER_TYPE || results.length >= MAX_TOTAL) break;
@@ -227,7 +297,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       }
 
       // --- Invoices ---
-      const invoices = (invoicesData.invoices ?? []) as Record<string, any>[];
+      const invoices = (invoicesData.invoices ?? []) as InvoiceSearchRow[];
       count = 0;
       for (const inv of invoices) {
         if (count >= MAX_PER_TYPE || results.length >= MAX_TOTAL) break;
@@ -256,7 +326,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       }
 
       // --- Meetings ---
-      const meetings = (meetingsData.meetings ?? []) as Record<string, any>[];
+      const meetings = (meetingsData.meetings ?? []) as MeetingSearchRow[];
       count = 0;
       for (const m of meetings) {
         if (count >= MAX_PER_TYPE || results.length >= MAX_TOTAL) break;
@@ -279,7 +349,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       }
 
       // --- Payments ---
-      const payments = (paymentsData.payments ?? []) as Record<string, any>[];
+      const payments = (paymentsData.payments ?? []) as PaymentSearchRow[];
       count = 0;
       for (const pay of payments) {
         if (count >= MAX_PER_TYPE || results.length >= MAX_TOTAL) break;
@@ -303,7 +373,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       }
 
       // --- Agreements ---
-      const agreements = (agreementsData.agreements ?? []) as Record<string, any>[];
+      const agreements = (agreementsData.agreements ?? []) as AgreementSearchRow[];
       count = 0;
       for (const a of agreements) {
         if (count >= MAX_PER_TYPE || results.length >= MAX_TOTAL) break;
@@ -326,7 +396,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       }
 
       // --- Files ---
-      const files = (filesData.files ?? []) as Record<string, any>[];
+      const files = (filesData.files ?? []) as FileSearchRow[];
       count = 0;
       for (const f of files) {
         if (count >= MAX_PER_TYPE || results.length >= MAX_TOTAL) break;
@@ -349,7 +419,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       }
 
       // --- Tasks ---
-      const tasks = (tasksData.tasks ?? []) as Record<string, any>[];
+      const tasks = (tasksData.tasks ?? []) as TaskSearchRow[];
       count = 0;
       for (const t of tasks) {
         if (count >= MAX_PER_TYPE || results.length >= MAX_TOTAL) break;
