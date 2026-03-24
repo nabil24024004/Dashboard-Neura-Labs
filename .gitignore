@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# firebase
+dashboard-neosparkx-firebase-adminsdk-fbsvc-422067cff9.json
