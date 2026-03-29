@@ -17,6 +17,8 @@ export type FileRecord = {
   id: string;
   project_id?: string | null;
   client_id?: string | null;
+  owner_type?: "client" | "agency" | null;
+  agency_label?: string | null;
   file_name: string;
   file_url: string;
   file_type: string;
@@ -36,9 +38,11 @@ interface FileGridProps {
 
 /* ── standalone form (prevent remount / focus loss) ── */
 interface UploadFormProps {
+  ownerType: "client" | "agency";
   clientId: string;
+  agencyLabel: string;
   description: string;
-  onChange: (k: "clientId" | "description", v: string) => void;
+  onChange: (k: "ownerType" | "clientId" | "agencyLabel" | "description", v: string) => void;
   clients: { id: string; company_name: string }[];
   error: string | null;
   uploading: boolean;
@@ -46,17 +50,31 @@ interface UploadFormProps {
   onCancel: () => void;
 }
 
-function UploadForm({ clientId, description, onChange, clients, error, uploading, onUpload, onCancel }: UploadFormProps) {
+function UploadForm({ ownerType, clientId, agencyLabel, description, onChange, clients, error, uploading, onUpload, onCancel }: UploadFormProps) {
   return (
     <div className="space-y-3">
       {error && <p className="text-xs text-[#ef4444] bg-[#ef4444]/10 border border-[#ef4444]/20 rounded px-3 py-2">{error}</p>}
       <div>
-        <label className="text-xs text-muted-foreground mb-1 block">Client *</label>
-        <select value={clientId} onChange={(e) => onChange("clientId", e.target.value)} className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none">
-          <option value="">Select client…</option>
-          {clients.map((c) => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+        <label className="text-xs text-muted-foreground mb-1 block">Related to *</label>
+        <select value={ownerType} onChange={(e) => onChange("ownerType", e.target.value)} className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none">
+          <option value="client">Client</option>
+          <option value="agency">Agency</option>
         </select>
       </div>
+      {ownerType === "client" ? (
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Client *</label>
+          <select value={clientId} onChange={(e) => onChange("clientId", e.target.value)} className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none">
+            <option value="">Select client…</option>
+            {clients.map((c) => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+          </select>
+        </div>
+      ) : (
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Short Name *</label>
+          <Input value={agencyLabel} onChange={(e) => onChange("agencyLabel", e.target.value)} placeholder="e.g. Contract, License, Brand Guide…" className="bg-background border-border text-foreground placeholder:text-muted-foreground h-9" />
+        </div>
+      )}
       <div>
         <label className="text-xs text-muted-foreground mb-1 block">Description (optional)</label>
         <Input value={description} onChange={(e) => onChange("description", e.target.value)} placeholder="What is this file?" className="bg-background border-border text-foreground placeholder:text-muted-foreground h-9" />
@@ -75,15 +93,19 @@ export function FileGrid({ files: initialFiles, clients }: FileGridProps) {
   const [files, setFiles] = useState<FileRecord[]>(initialFiles);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [ownerType, setOwnerType] = useState<"client" | "agency">("client");
   const [clientId, setClientId] = useState("");
+  const [agencyLabel, setAgencyLabel] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function handleFormChange(k: "clientId" | "description", v: string) {
-    if (k === "clientId") setClientId(v);
+  function handleFormChange(k: "ownerType" | "clientId" | "agencyLabel" | "description", v: string) {
+    if (k === "ownerType") setOwnerType(v as "client" | "agency");
+    else if (k === "clientId") setClientId(v);
+    else if (k === "agencyLabel") setAgencyLabel(v);
     else setDescription(v);
   }
 
@@ -99,7 +121,8 @@ export function FileGrid({ files: initialFiles, clients }: FileGridProps) {
 
   async function handleUpload() {
     if (!pendingFile) return;
-    if (!clientId) { setError("Please select a client."); return; }
+    if (ownerType === "client" && !clientId) { setError("Please select a client."); return; }
+    if (ownerType === "agency" && !agencyLabel.trim()) { setError("Please enter a short name for this agency file."); return; }
     setError(null);
 
     startTransition(async () => {
@@ -111,26 +134,43 @@ export function FileGrid({ files: initialFiles, clients }: FileGridProps) {
       if (!uploadRes.ok) { setError(uploadPayload?.error ?? "Upload failed"); return; }
 
       // 2️⃣ Save record to DB
+      const bodyPayload: Record<string, unknown> = {
+        file_name: pendingFile.name,
+        file_url: uploadPayload.url,
+        file_type: pendingFile.type,
+        file_size: pendingFile.size,
+        owner_type: ownerType,
+        description: description || undefined,
+      };
+      if (ownerType === "client") {
+        bodyPayload.client_id = clientId;
+      } else {
+        bodyPayload.agency_label = agencyLabel.trim();
+      }
+
       const recRes = await fetch("/api/files", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          file_name: pendingFile.name,
-          file_url: uploadPayload.url,
-          file_type: pendingFile.type,
-          file_size: pendingFile.size,
-          client_id: clientId,
-          description: description || undefined,
-        }),
+        body: JSON.stringify(bodyPayload),
       });
       const recPayload = await recRes.json().catch(() => null);
       if (!recRes.ok) { setError(recPayload?.error ?? "Failed to save file record"); return; }
 
-      const client = clients.find((c) => c.id === clientId);
-      setFiles((prev) => [{ ...recPayload.file, clients: client ? { company_name: client.company_name } : null }, ...prev]);
+      const client = ownerType === "client" ? clients.find((c) => c.id === clientId) : null;
+      setFiles((prev) => [
+        {
+          ...recPayload.file,
+          clients: client ? { company_name: client.company_name } : null,
+          owner_type: ownerType,
+          agency_label: ownerType === "agency" ? agencyLabel.trim() : null,
+        },
+        ...prev,
+      ]);
       setPendingFile(null);
       setShowForm(false);
+      setOwnerType("client");
       setClientId("");
+      setAgencyLabel("");
       setDescription("");
     });
   }
@@ -159,7 +199,7 @@ export function FileGrid({ files: initialFiles, clients }: FileGridProps) {
   };
 
   const filtered = files.filter((f) =>
-    !search || f.file_name.toLowerCase().includes(search.toLowerCase()) || (f.clients?.company_name ?? "").toLowerCase().includes(search.toLowerCase())
+    !search || f.file_name.toLowerCase().includes(search.toLowerCase()) || (f.clients?.company_name ?? "").toLowerCase().includes(search.toLowerCase()) || (f.agency_label ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -186,8 +226,8 @@ export function FileGrid({ files: initialFiles, clients }: FileGridProps) {
       {showForm && pendingFile && (
         <div className="rounded-xl border border-border bg-card p-5">
           <h3 className="text-sm font-semibold text-foreground mb-1">Upload: <span className="text-primary">{pendingFile.name}</span> <span className="text-muted-foreground text-xs font-normal">({formatSize(pendingFile.size)})</span></h3>
-          <p className="text-xs text-muted-foreground mb-4">Choose a client to associate this file with.</p>
-          <UploadForm clientId={clientId} description={description} onChange={handleFormChange} clients={clients} error={error} uploading={isPending} onUpload={handleUpload} onCancel={() => { setShowForm(false); setPendingFile(null); }} />
+          <p className="text-xs text-muted-foreground mb-4">Choose whether this file belongs to a client or the agency.</p>
+          <UploadForm ownerType={ownerType} clientId={clientId} agencyLabel={agencyLabel} description={description} onChange={handleFormChange} clients={clients} error={error} uploading={isPending} onUpload={handleUpload} onCancel={() => { setShowForm(false); setPendingFile(null); }} />
         </div>
       )}
 
@@ -240,9 +280,11 @@ export function FileGrid({ files: initialFiles, clients }: FileGridProps) {
 
               <div className="p-4 flex flex-col gap-1">
                 <h4 className="text-sm font-medium text-foreground truncate" title={file.file_name}>{file.file_name}</h4>
-                {file.clients?.company_name && (
+                {file.owner_type === "agency" && file.agency_label ? (
+                  <span className="text-xs text-[#f59e0b] truncate">Agency · {file.agency_label}</span>
+                ) : file.clients?.company_name ? (
                   <span className="text-xs text-primary truncate">{file.clients.company_name}</span>
-                )}
+                ) : null}
                 <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
                   <span>{formatSize(file.file_size)}</span>
                   <span>{format(new Date(file.created_at), "MMM d, yyyy")}</span>

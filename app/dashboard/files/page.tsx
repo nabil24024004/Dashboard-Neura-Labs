@@ -21,6 +21,8 @@ export default async function FilesPage() {
         id: d.id,
         client_id: d.client_id,
         project_id: d.project_id,
+        owner_type: d.owner_type ?? (d.client_id ? "client" : null),
+        agency_label: d.agency_label ?? null,
         file_name: d.file_name,
         file_url: d.file_url,
         file_type: d.file_type,

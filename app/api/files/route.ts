@@ -21,6 +21,8 @@ async function enrichFile(doc: Record<string, unknown>) {
   }
   return {
     ...doc,
+    owner_type: doc.owner_type ?? (doc.client_id ? "client" : null),
+    agency_label: doc.agency_label ?? null,
     clients: doc.client_name ? { company_name: doc.client_name } : null,
     projects: doc.project_name ? { project_name: doc.project_name } : null,
   };
@@ -50,6 +52,8 @@ export async function POST(req: Request) {
   const file_type = normalizeText(body?.file_type);
   const client_id = normalizeText(body?.client_id);
   const client_name_input = normalizeText(body?.client_name);
+  const owner_type = normalizeText(body?.owner_type) ?? "client";
+  const agency_label = normalizeText(body?.agency_label);
 
   if (!file_name || !file_url || !file_type)
     return NextResponse.json({ error: "file_name, file_url, and file_type are required" }, { status: 400 });
@@ -78,7 +82,11 @@ export async function POST(req: Request) {
     file_type,
     file_size: Number(body?.file_size) || 0,
     uploaded_by: userId,
+    owner_type,
   };
+  if (owner_type === "agency" && agency_label) {
+    payload.agency_label = agency_label;
+  }
   if (resolvedClientId) {
     payload.client_id = resolvedClientId;
     payload.client_name = resolvedClientName;
